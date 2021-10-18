@@ -1,0 +1,20 @@
+{
+    "seed": 2021,
+    "saved_dir" : "./tmp",
+    "data_root" : "../input/data",
+    "train_json_path" : "../input/data/train.json",
+    "val_json_path" : "../input/data/val.json",
+    "train_dataset": "CustomDataSet",
+    "val_dataset": "CustomDataSet",
+    "train_augmentation": "BaseAugmentation",
+    "val_augmentation": "BaseAugmentation",
+    "num_epochs": 2,
+    "num_workers": 4,
+    "train_batch_size": 24,
+    "val_batch_size": 24,
+    "model": "FCN_resnet50",
+    "criterion": "custom_CrossEntropyLoss",
+    "optimizer": "SGD",
+    "lr" : 0.0001,
+    "val_every" : 1
+}
