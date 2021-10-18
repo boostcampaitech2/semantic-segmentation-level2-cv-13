@@ -66,8 +66,8 @@ if __name__ == "__main__":
                            ToTensorV2()
                            ])
 
-    test_dataset_module = getattr(import_module("dataset"), "CustomDataSet")
-    test_dataset = test_dataset_module(data_root="../input/data", json_dir="../input/data/test.json", mode = 'test', transform=test_transform)
+    test_dataset_module = getattr(import_module("dataset"), "TestDataset")
+    test_dataset = test_dataset_module(annotation="../input/data/test.json", data_dir="../input/data", transform=test_transform)
     test_loader = DataLoader(dataset=test_dataset,
                                           batch_size=24,
                                           num_workers=4,
