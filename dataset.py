@@ -50,7 +50,7 @@ class TrainDataset(Dataset):
         train_df['seg_area_cat'] = train_df['segmentation'].apply(self._get_area_cat)
         train_df['cat'] = train_df['category_id'].astype(str) + "_" + train_df['seg_area_cat'].astype(str)
         
-        skf = StratifiedGroupKFold(n_splits = k, random_state = 923, shuffle = True)
+        skf = StratifiedGroupKFold(n_splits = k, random_state = random_state, shuffle = True)
         for i, (train_idx, val_idx) in enumerate(skf.split(train_df['id'], train_df['cat'], train_df['image_id'])):
             if i == fold:
                 break
