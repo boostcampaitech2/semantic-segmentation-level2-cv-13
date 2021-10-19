@@ -16,5 +16,7 @@
     "criterion": "custom_CrossEntropyLoss",
     "optimizer": "SGD",
     "lr" : 0.0001,
-    "val_every" : 1
+    "val_every" : 1,
+    "wandb_prj_name": "semseg",
+    "wandb_run_name": "fcn_test"
 }
