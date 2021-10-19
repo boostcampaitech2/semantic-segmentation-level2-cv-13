@@ -63,15 +63,17 @@ if __name__ == "__main__":
     model = model.to(device)
 
     test_transform = A.Compose([
-                           ToTensorV2()
-                           ])
+                                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                                ToTensorV2()
+                               ])
 
-    test_dataset_module = getattr(import_module("dataset"), "CustomDataSet")
-    test_dataset = test_dataset_module(data_root="../input/data", json_dir="../input/data/test.json", mode = 'test', transform=test_transform)
+    test_dataset_module = getattr(import_module("dataset"), "TestDataset")
+    test_dataset = test_dataset_module(data_root = "../input/data", json_dir = "../input/data/test.json",
+                                       transform=test_transform)
     test_loader = DataLoader(dataset=test_dataset,
-                                          batch_size=24,
-                                          num_workers=4,
-                                          collate_fn=collate_fn)
+                             batch_size=24,
+                             num_workers=4,
+                             collate_fn=collate_fn)
 
     # sample_submisson.csv 열기
     submission = pd.read_csv('./submission/sample_submission.csv', index_col=None)
