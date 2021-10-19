@@ -78,11 +78,12 @@ class TrainDataset(Dataset):
                 image, mask, image_info = self.load_mixup(index)
             elif random_number > 1 - self.mixup_prob - self.cutmix_prob:
                 image, mask, image_info = self.load_cutmix(index)
+                if self.mixup_prob > 0:
+                    mask = self.mask_to_prob(mask)
             else:
                 image, mask, image_info = self.load_image_mask(index)
-
-            if self.mixup_prob > 0:
-                mask = self.mask_to_prob(mask)
+                if self.mixup_prob > 0:
+                    mask = self.mask_to_prob(mask)
 
         if self.transform:
             transformed = self.transform(image = image, mask = mask)
@@ -98,17 +99,15 @@ class TrainDataset(Dataset):
 
         image = cv2.imread(os.path.join(self.data_dir, image_info['file_name']))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
-        image /= 255.0
 
         ann_ids = self.coco.getAnnIds(imgIds=image_info['id'])
         anns = self.coco.loadAnns(ann_ids)
         cat_ids = self.coco.getCatIds()
         cats = self.coco.loadCats(cat_ids)
-
         
         mask = np.zeros((image_info["height"], image_info["width"]))
         
-        anns = sorted(anns, key=lambda idx : len(idx['segmentation'][0]), reverse=False)
+        anns = sorted(anns, key=lambda idx : len(idx['segmentation'][0]), reverse=True)
         for i in range(len(anns)):
             className = self.get_classname(anns[i]['category_id'], cats)
             pixel_value = self.category_names.index(className)
@@ -130,29 +129,32 @@ class TrainDataset(Dataset):
 
         result_image = np.full((img_size, img_size, 3), 1, dtype = np.float32)
         result_mask = np.full((img_size, img_size), 0, dtype = np.int8)
-
+# tmp = A.augmentations.crops.transforms.CropNonEmptyMaskIfExists(256, 256)(image = img, mask = mask)
         for i, index in enumerate(indexes):
             image, mask, _ = self.load_image_mask(index)
             if i == 0:
                 x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc
-                x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h
+                #x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h
             elif i == 1:  
                 x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, s * 2), yc
-                x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
+                #x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
             elif i == 2: 
                 x1a, y1a, x2a, y2a = max(xc - w, 0), yc, xc, min(s * 2, yc + h)
-                x1b, y1b, x2b, y2b = w - (x2a - x1a), 0, max(xc, w), min(y2a - y1a, h)
+                #x1b, y1b, x2b, y2b = w - (x2a - x1a), 0, max(xc, w), min(y2a - y1a, h)
             elif i == 3: 
                 x1a, y1a, x2a, y2a = xc, yc, min(xc + w, s * 2), min(s * 2, yc + h)
-                x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
-        
-            result_image[y1a:y2a, x1a:x2a] = image[y1b:y2b, x1b:x2b]
-            result_mask[y1a:y2a, x1a:x2a] = mask[y1b:y2b, x1b:x2b]
+                #x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
+
+            transformed = A.augmentations.crops.transforms.CropNonEmptyMaskIfExists(y2a - y1a, x2a - x1a)(image = image, mask = mask)
+            result_image[y1a:y2a, x1a:x2a] = transformed['image']
+            result_mask[y1a:y2a, x1a:x2a] = transformed['mask']
 
         return result_image, result_mask, image_info
 
 
     def load_mixup(self, index, img_size = 512):
+
+        random_number = random.uniform(0.4, 0.6)
 
         image_id = self.coco.getImgIds(imgIds = self.img_idx[index])
         image_info = self.coco.loadImgs(image_id)[0]
@@ -162,12 +164,12 @@ class TrainDataset(Dataset):
         image1, mask1, image_info1 = self.load_image_mask(indexes[0])
         image2, mask2, image_info2 = self.load_image_mask(indexes[1])
 
-        result_image = (image1 + image2) / 2
+        result_image = image1 * random_number + image2 * (1 - random_number)
 
         mask1 = self.mask_to_prob(mask1)
         mask2 = self.mask_to_prob(mask2)
         
-        result_mask = (mask1 + mask2) / 2
+        result_mask = mask1 * random_number + mask2 * (1 - random_number)
 
         return result_image, result_mask, image_info
 
@@ -234,7 +236,6 @@ class TestDataset(Dataset):
         
         images = cv2.imread(os.path.join(self.data_dir, image_infos['file_name']))
         images = cv2.cvtColor(images, cv2.COLOR_BGR2RGB).astype(np.float32)
-        images /= 255.0
         
         if self.transform is not None:
             transformed = self.transform(image=images)
