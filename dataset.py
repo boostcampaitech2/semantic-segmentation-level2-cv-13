@@ -129,7 +129,7 @@ class TrainDataset(Dataset):
 
         result_image = np.full((img_size, img_size, 3), 1, dtype = np.float32)
         result_mask = np.full((img_size, img_size), 0, dtype = np.int8)
-# tmp = A.augmentations.crops.transforms.CropNonEmptyMaskIfExists(256, 256)(image = img, mask = mask)
+
         for i, index in enumerate(indexes):
             image, mask, _ = self.load_image_mask(index)
             if i == 0:
