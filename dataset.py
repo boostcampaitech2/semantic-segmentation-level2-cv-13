@@ -1,6 +1,7 @@
 from sklearn.model_selection import StratifiedGroupKFold
 from torch.utils.data import Dataset
 from pycocotools.coco import COCO
+import albumentations as A
 import pandas as pd
 import numpy as np
 import random
@@ -15,12 +16,12 @@ class TrainDataset(Dataset):
     category_names = ['Backgroud','General trash','Paper','Paper pack','Metal','Glass',
                       'Plastic','Styrofoam','Plastic bag','Battery','Clothing']
 
-    def __init__(self, annotation, data_dir, mode, fold = 0, k = 5, cutmix_prob = 0.25, mixup_prob = 0.25, random_state = 923, transform = None):
+    def __init__(self, data_root, json_dir, mode, fold = 0, k = 5, cutmix_prob = 0.25, mixup_prob = 0.25, random_state = 923, transform = None):
         
         """ Trash Object Detection Train Dataset
         Args:
-            annotation : annotation directory
-            data_dir : data_dir directory
+            data_root : root for data
+            json_dir : directory for annotation json file
             mode : "train" when you want to train, "validation" when you want to evaluate
             cutmix_prob : probability of applying a cutmix
             mixup_prob : probability of applying a mixup
@@ -31,18 +32,18 @@ class TrainDataset(Dataset):
         """
         
         super().__init__()
-        self.data_dir = data_dir
-        self.coco = COCO(annotation)
+        self.data_root = data_root
+        self.coco = COCO(json_dir)
         self.mode = mode
         self.cutmix_prob = cutmix_prob
         self.mixup_prob = mixup_prob
         self.transform = transform
         self.num_classes = len(self.category_names)
 
-        with open(annotation) as f:
+        with open(json_dir) as f:
             train = json.load(f)
 
-        self.coco = COCO(annotation)
+        self.coco = COCO(json_dir)
         df_images = pd.json_normalize(train['images'])
         df_annotations = pd.json_normalize(train['annotations'])
         train_df = df_images.set_index('id').join(df_annotations.set_index('image_id'))
@@ -97,7 +98,7 @@ class TrainDataset(Dataset):
         image_id = self.coco.getImgIds(imgIds = self.img_idx[index])
         image_info = self.coco.loadImgs(image_id)[0]
 
-        image = cv2.imread(os.path.join(self.data_dir, image_info['file_name']))
+        image = cv2.imread(os.path.join(self.data_root, image_info['file_name']))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
 
         ann_ids = self.coco.getAnnIds(imgIds=image_info['id'])
@@ -134,17 +135,16 @@ class TrainDataset(Dataset):
             image, mask, _ = self.load_image_mask(index)
             if i == 0:
                 x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc
-                #x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h
+                
             elif i == 1:  
                 x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, s * 2), yc
-                #x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
+                
             elif i == 2: 
                 x1a, y1a, x2a, y2a = max(xc - w, 0), yc, xc, min(s * 2, yc + h)
-                #x1b, y1b, x2b, y2b = w - (x2a - x1a), 0, max(xc, w), min(y2a - y1a, h)
+                
             elif i == 3: 
                 x1a, y1a, x2a, y2a = xc, yc, min(xc + w, s * 2), min(s * 2, yc + h)
-                #x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
-
+                
             transformed = A.augmentations.crops.transforms.CropNonEmptyMaskIfExists(y2a - y1a, x2a - x1a)(image = image, mask = mask)
             result_image[y1a:y2a, x1a:x2a] = transformed['image']
             result_mask[y1a:y2a, x1a:x2a] = transformed['mask']
@@ -221,12 +221,12 @@ class TrainDataset(Dataset):
 
 class TestDataset(Dataset):
 
-    def __init__(self, annotation, data_dir, transform = None):
+    def __init__(self, data_root, json_dir, transform = None):
 
         super().__init__()
-        self.data_dir = data_dir
+        self.data_root = data_root
         self.transform = transform
-        self.coco = COCO(annotation)
+        self.coco = COCO(json_dir)
 
         
     def __getitem__(self, index: int):
@@ -234,7 +234,7 @@ class TestDataset(Dataset):
         image_id = self.coco.getImgIds(imgIds=index)
         image_infos = self.coco.loadImgs(image_id)[0]
         
-        images = cv2.imread(os.path.join(self.data_dir, image_infos['file_name']))
+        images = cv2.imread(os.path.join(self.data_root, image_infos['file_name']))
         images = cv2.cvtColor(images, cv2.COLOR_BGR2RGB).astype(np.float32)
         
         if self.transform is not None:
