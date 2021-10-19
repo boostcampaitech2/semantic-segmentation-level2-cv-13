@@ -1,3 +1,4 @@
+import os
 from utils import label_accuracy_score, add_hist
 from dataset import *
 import torch
@@ -109,6 +110,9 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
                 print(f"Best performance at epoch: {epoch + 1}")
                 print(f"Save model in {saved_dir}")
                 best_loss = avrg_loss
+                save_dir = os.path.dirname(saved_dir)
+                if not os.path.exists(saved_dir):
+                    os.makedirs(saved_dir)
                 save_model(model, saved_dir)
 
 def arg_parse():
@@ -127,19 +131,35 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     train_transform = A.Compose([
-                            ToTensorV2()
-                            ])
+                                 A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                                 ToTensorV2()
+                                ])
     val_transform = A.Compose([
-                            ToTensorV2()
-                            ])
+                               A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                               ToTensorV2()
+                              ])
 
     train_dataset_module = getattr(import_module("dataset"), cfgs.train_dataset)
-    train_dataset = train_dataset_module(data_root=cfgs.data_root, json_dir=cfgs.train_json_path, transform=train_transform)
-    train_dataloader = DataLoader(train_dataset, batch_size=cfgs.train_batch_size, num_workers=cfgs.num_workers, shuffle=True, collate_fn=collate_fn)
+    train_dataset = train_dataset_module(data_root = cfgs.data_root, json_dir = cfgs.train_json_path, mode = "train",
+                                         fold = cfgs.fold, k = cfgs.k,
+                                         cutmix_prob = cfgs.cutmix_prob, mixup_prob = cfgs.mixup_prob,
+                                         transform=train_transform)
+    train_dataloader = DataLoader(train_dataset,
+                                  batch_size=cfgs.train_batch_size,
+                                  num_workers=cfgs.num_workers,
+                                  shuffle=True,
+                                  collate_fn=collate_fn)
 
     val_dataset_module = getattr(import_module("dataset"), cfgs.val_dataset)
-    val_dataset = val_dataset_module(data_root=cfgs.data_root, json_dir=cfgs.val_json_path, transform=val_transform)
-    val_dataloader = DataLoader(val_dataset, batch_size=cfgs.val_batch_size, num_workers=cfgs.num_workers, shuffle=False, collate_fn=collate_fn)
+    val_dataset = val_dataset_module(data_root = cfgs.data_root, json_dir = cfgs.train_json_path, mode = "validation",
+                                       fold = cfgs.fold, k = cfgs.k,
+                                       cutmix_prob = cfgs.cutmix_prob, mixup_prob = cfgs.mixup_prob,
+                                       transform=val_transform)
+    val_dataloader = DataLoader(val_dataset,
+                                batch_size=cfgs.val_batch_size,
+                                num_workers=cfgs.num_workers,
+                                shuffle=False,
+                                collate_fn=collate_fn)
 
     num_classes = train_dataset.num_classes
 
