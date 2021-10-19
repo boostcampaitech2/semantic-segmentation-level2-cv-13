@@ -77,7 +77,7 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
         
         acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
         #IoU_by_class = [{classes : round(IoU,4)} for IoU, classes in zip(IoU , category_names)]
-        IoU_by_class = [[c,IoU] for IoU,c in zip(IoU, sorted_df['Categories'])]
+        IoU_by_class = [[c,IoU] for IoU,c in zip(IoU, category_names)]
         
         avrg_loss = total_loss / cnt
         print(f'Validation #{epoch}  Average Loss: {round(avrg_loss.item(), 4)}, Accuracy : {round(acc, 4)}, \

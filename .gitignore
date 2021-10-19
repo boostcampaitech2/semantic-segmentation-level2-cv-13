@@ -1,4 +1,5 @@
 wandb/
 __pycache__/
+tmp/
 *.pyc
 ._-
