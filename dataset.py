@@ -16,7 +16,7 @@ class TrainDataset(Dataset):
     category_names = ['Backgroud','General trash','Paper','Paper pack','Metal','Glass',
                       'Plastic','Styrofoam','Plastic bag','Battery','Clothing']
 
-    def __init__(self, data_root, json_dir, mode, fold = 0, k = 5, cutmix_prob = 0.25, mixup_prob = 0.25, random_state = 923, transform = None):
+    def __init__(self, data_root, json_dir, mode = "train", fold = 0, k = 5, cutmix_prob = 0.25, mixup_prob = 0.25, random_state = 923, transform = None):
         
         """ Trash Object Detection Train Dataset
         Args:
