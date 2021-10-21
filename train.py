@@ -12,9 +12,6 @@ from importlib import import_module
 import random
 import numpy as np
 
-import warnings
-warnings.filterwarnings('ignore')
-
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
@@ -38,10 +35,11 @@ cur_date = datetime.today().strftime("%Sy%m%d")
 def collate_fn(batch):
     return tuple(zip(*batch))
 
-def save_model(model, saved_dir, file_name='hrnet_ocr.pt'):
+def save_model(model, saved_dir, file_name):
     check_point = {'net': model.state_dict()}
     output_path = os.path.join(saved_dir, file_name)
     torch.save(model, output_path)
+
 
 def validation(epoch, num_epochs, model, data_loader, criterion, device):
     print(f'Start validation #{epoch}')
@@ -188,6 +186,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
                     if not os.path.exists(saved_dir):
                         os.makedirs(saved_dir)
                     save_model(model, saved_dir, file_name=f"{model.__name__}_{best_miou}_{cur_date}.pt")
+                    
 
 
     #heatmap    
