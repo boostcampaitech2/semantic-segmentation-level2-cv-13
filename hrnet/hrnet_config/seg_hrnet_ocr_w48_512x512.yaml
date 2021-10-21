@@ -4,7 +4,7 @@ DATASET:
 MODEL:
   NAME: seg_hrnet_ocr
   NUM_OUTPUTS: 2
-  PRETRAINED: ""
+  PRETRAINED: "" #"./hrnet/hrnet_pretrained/hrnet_ocr_cs_trainval_8227_torch11.pth"
   ALIGN_CORNERS: True
   OCR:
     MID_CHANNELS: 512
