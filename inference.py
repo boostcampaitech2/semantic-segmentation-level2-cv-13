@@ -2,11 +2,14 @@ import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+from utils import fix_seed
 
 from importlib import import_module
 import argparse
 import tqdm
 import os
+import json
+from collections import namedtuple
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -67,12 +70,15 @@ if __name__ == "__main__":
     with open(args.cfg, 'r') as f:
         cfgs = json.load(f, object_hook=lambda d: namedtuple('x', d.keys())(*d.values()))
 
+    # seed 고정
+    fix_seed(cfgs.seed)
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     output_name = cfgs.weight_path.split("/")[-1].replace('.pt', "")
 
     # model arch
-    model_module = getattr(import_module("model"), cfgs.model)
-    model = model_module(cfgs.num_classes)
+    model_module = getattr(import_module("model"), cfgs.model.name)
+    model = model_module(**cfgs.model.args._asdict())
 
     # load model weights
     checkpoint = torch.load(cfgs.weight_path, map_location=device)
@@ -91,8 +97,7 @@ if __name__ == "__main__":
     test_dataset = test_dataset_module(data_root = cfgs.data_root, json_dir = cfgs.json_path,
                                        transform=test_transform)
     test_loader = DataLoader(dataset=test_dataset,
-                             batch_size=cfgs.batch_size,
-                             num_workers=cfgs.num_workers,
+                             **cfgs.dataloader.args._asdict(),
                              collate_fn=collate_fn)
 
     # sample_submisson.csv 열기

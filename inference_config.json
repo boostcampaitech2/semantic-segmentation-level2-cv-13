@@ -4,10 +4,13 @@
     "json_path" : "../input/data/test.json",
     "sample_submission_path": "../baseline_code/submission/sample_submission.csv",
     "dataset": "TestDataset",
-    "model_name": "FCN_resnet50",
+    "dataloader": {"args": {"batch_size": 8,
+                   "num_workers": 4,
+                   "shuffle": false}},
+    "augmentation": "BaseAugmentation",
+    "model": {"name":"DeepLabV3_resnet101",
+              "args": {"num_classes": 11,
+                       "target_size": 256}},
     "weight_path": "./results/fcn_resnet50_best_model(pretrained).pt",
-    "output_path": "./submission",
-    "num_classes": 11,
-    "batch_size": 8,
-    "num_workers": 4
+    "output_path": "./submission"    
 }
