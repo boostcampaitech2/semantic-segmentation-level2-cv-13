@@ -224,22 +224,17 @@ def main():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    train_transform = A.Compose([
-                                 A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                                 ToTensorV2()
-                                ])
-    val_transform = A.Compose([
-                               A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                               ToTensorV2()
-                              ])
-
+    train_augmentation_module = getattr(import_module("dataset"), cfgs.train_augmentation)
+    train_augmentation = train_augmentation_module().transform
+    val_augmentation_module = getattr(import_module("dataset"), cfgs.val_augmentation)
+    val_augmentation = val_augmentation_module().transform
 
     train_dataset_module = getattr(import_module("dataset"), cfgs.train_dataset.name)
-    train_dataset = train_dataset_module(cfgs.data_root, cfgs.train_json_path, **cfgs.train_dataset.args._asdict(), transform = train_transform)
+    train_dataset = train_dataset_module(cfgs.data_root, cfgs.train_json_path, **cfgs.train_dataset.args._asdict(), transform = train_augmentation)
     train_dataloader = DataLoader(train_dataset, **cfgs.train_dataloader.args._asdict(), collate_fn=collate_fn)
     
     val_dataset_module = getattr(import_module("dataset"), cfgs.val_dataset.name)
-    val_dataset = val_dataset_module(cfgs.data_root, cfgs.val_json_path, **cfgs.val_dataset.args._asdict(), transform = val_transform)
+    val_dataset = val_dataset_module(cfgs.data_root, cfgs.val_json_path, **cfgs.val_dataset.args._asdict(), transform = val_augmentation)
     val_dataloader = DataLoader(val_dataset, **cfgs.val_dataloader.args._asdict(), collate_fn = collate_fn)
 
     model_module = getattr(import_module("model"), cfgs.model.name)
