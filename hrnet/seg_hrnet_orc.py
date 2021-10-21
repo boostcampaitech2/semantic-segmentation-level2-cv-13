@@ -650,6 +650,7 @@ class HighResolutionNet(nn.Module):
 
         out = self.cls_head(feats)
 
+        
         out_aux_seg.append(out_aux)
         out_aux_seg.append(out)
 
@@ -675,9 +676,7 @@ class HighResolutionNet(nn.Module):
             print(set(pretrained_dict) - set(model_dict))            
             pretrained_dict = {k: v for k, v in pretrained_dict.items()
                                if k in model_dict.keys()}
-            # for k, _ in pretrained_dict.items():
-                # logger.info(
-                #     '=> loading {} pretrained model {}'.format(k, pretrained))
+
             model_dict.update(pretrained_dict)
             self.load_state_dict(model_dict)
         elif pretrained:
