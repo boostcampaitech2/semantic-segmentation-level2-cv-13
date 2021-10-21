@@ -11,7 +11,7 @@ class custom_CrossEntropyLoss(nn.Module):
 
 
     def forward(self, pred, target):
-      if isinstance(pred, list):
+        if isinstance(pred, list):
             loss = 0
             weights = [0.4, 1]
             assert len(weights) == len(pred)
