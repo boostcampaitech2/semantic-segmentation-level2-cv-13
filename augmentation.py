@@ -7,3 +7,4 @@ class BaseAugmentation:
             A.Normalize(mean=mean, std=std),
             ToTensorV2()
             ])
+            
