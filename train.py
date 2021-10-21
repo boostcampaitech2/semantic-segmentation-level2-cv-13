@@ -175,7 +175,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
                     #save_dir = os.path.dirname(saved_dir)
                     if not os.path.exists(saved_dir):
                         os.makedirs(saved_dir)
-                    save_model(model, saved_dir, file_name=f"{model.__name__}_{best_loss}_{cur_date}.pt")
+                    save_model(model, saved_dir, file_name=f"{model.model_name}_{best_loss}_{cur_date}.pt")
                     
             else: # miou 기준 모델 저장
                 if miou > best_miou:
@@ -185,7 +185,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
                     #save_dir = os.path.dirname(saved_dir)
                     if not os.path.exists(saved_dir):
                         os.makedirs(saved_dir)
-                    save_model(model, saved_dir, file_name=f"{model.__name__}_{best_miou}_{cur_date}.pt")
+                    save_model(model, saved_dir, file_name=f"{model.model_name}_{best_miou}_{cur_date}.pt")
                     
 
 
