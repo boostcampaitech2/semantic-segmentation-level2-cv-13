@@ -224,4 +224,5 @@ class TestDataset(Dataset):
 
     def __len__(self):
    
-        return len(self.num_images)
+        return self.num_images
+        
