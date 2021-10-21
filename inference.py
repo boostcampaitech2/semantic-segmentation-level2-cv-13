@@ -5,12 +5,10 @@ from torch.utils.data import DataLoader
 from utils import fix_seed, arg_parse
 
 from importlib import import_module
-import tqdm
+from tqdm import tqdm
 import os
 import json
 from collections import namedtuple
-import warnings
-warnings.filterwarnings("ignore")
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -29,9 +27,7 @@ def test(model, test_loader, device):
     preds_array = np.empty((0, size*size), dtype=np.compat.long)
     
     with torch.no_grad():
-        for step, (imgs, image_infos) in enumerate(test_loader):
-            if step % 10 == 0:
-                print(f"Step: {step+1}")
+        for imgs, image_infos in tqdm(test_loader):
             # inference (512 x 512)
             outs = model(torch.stack(imgs).to(device))['out']
             oms = torch.argmax(outs.squeeze(), dim=1).detach().cpu().numpy()
@@ -99,7 +95,8 @@ if __name__ == "__main__":
     file_names, preds = test(model, test_loader, device)
 
     # PredictionString 대입
-    for file_name, string in zip(file_names, preds):
+    print("Generating Submission...")
+    for file_name, string in tqdm(zip(file_names, preds)):
         submission = submission.append({"image_id" : file_name, "PredictionString" : ' '.join(str(e) for e in string.tolist())}, 
                                     ignore_index=True)
 
