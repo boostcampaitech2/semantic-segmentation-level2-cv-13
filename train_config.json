@@ -1,6 +1,6 @@
 {
-    "seed": 2021,
-    "saved_dir" : "./tmp",
+    "seed": 0,
+    "saved_dir" : "./results",
     "data_root" : "../input/data",
     "train_json_path" : "../input/data/train_all.json",
     "test_json_path" : "../input/data/test.json",
@@ -38,5 +38,6 @@
                             "weight_decay" : 1e-6}},
     "val_every" : 1,
     "wandb_prj_name": "semseg",
-    "wandb_run_name": "fcn_test"
+    "wandb_run_name": "deeplab test",
+    "save_mode": "miou"
 }

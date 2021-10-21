@@ -1,8 +1,23 @@
 import torch
 import random
 import numpy as np
+import argparse
+
+def arg_parse():
+    """
+    parse arguments from a command
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cfg', type=str)
+    args = parser.parse_args()
+    
+    return args
 
 def fix_seed(random_seed):
+    """
+    fix seed to control any randomness from a code 
+    (enable stability of the experiments' results.)
+    """
     torch.manual_seed(random_seed)
     torch.cuda.manual_seed(random_seed)
     torch.cuda.manual_seed_all(random_seed) # if use multi-GPU
@@ -15,6 +30,9 @@ def fix_seed(random_seed):
 # # https://github.com/wkentaro/pytorch-fcn/blob/master/torchfcn/utils.py
 
 def _fast_hist(label_true, label_pred, n_class):
+    """
+    make confusion matrix for a single image
+    """
     mask = (label_true >= 0) & (label_true < n_class)
     hist = np.bincount(n_class * label_true[mask].astype(int) + label_pred[mask],
                         minlength=n_class ** 2).reshape(n_class, n_class)
