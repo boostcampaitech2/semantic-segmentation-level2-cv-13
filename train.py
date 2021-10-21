@@ -276,7 +276,7 @@ def main():
             scheduler_module = getattr(import_module("torch.optim.lr_scheduler"), cfgs.scheduler.name)
             scheduler = scheduler_module(optimizer, **cfgs.scheduler.args._asdict())
     except AttributeError :
-            print('There is no Scheduler.')
+            print('There is no Scheduler!')
             scheduler = None
 
     train(cfgs.num_epochs, model, train_dataloader, val_dataloader, criterion, optimizer, cfgs.saved_dir, cfgs.val_every, cfgs.save_mode, device, scheduler)
