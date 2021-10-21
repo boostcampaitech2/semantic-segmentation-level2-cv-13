@@ -4,6 +4,7 @@ import yaml
 from hrnet.seg_hrnet_orc import get_seg_model
 import torch.nn.functional as F
 
+import segmentation_models_pytorch as smp
 
 class FCN_resnet50(nn.Module):
     model_name = "FCN_resnet50"
@@ -52,3 +53,19 @@ class HRNetOCR(nn.Module):
             x = F.interpolate(input = x[1], size = (self.w, self.h), mode = "bilinear", align_corners = True)
         return {'out' : x}
 
+class Unet(nn.Module):
+    def __init__(self, encoder_name="efficientnet-b0", encoder_weights="imagenet", in_channels=3, classes=11):
+        super().__init__()
+        self.encoder_name = encoder_name
+        self.encoder_weights = encoder_weights
+        self.in_channels = in_channels
+        self.classes = classes
+        self.model = smp.Unet(
+            encoder_name = self.encoder_name,
+            encoder_weights = self.encoder_weights,
+            in_channels = self.in_channels,
+            classes = self.classes
+        )
+    
+    def forward(self, x):
+        return {'out': self.model(x)}
