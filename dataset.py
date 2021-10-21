@@ -1,4 +1,3 @@
-from sklearn.model_selection import StratifiedGroupKFold
 from torch.utils.data import Dataset
 from pycocotools.coco import COCO
 import albumentations as A
@@ -9,7 +8,6 @@ import torch
 import json
 import cv2
 import os
-
 
 class TrainDataset(Dataset):
 
