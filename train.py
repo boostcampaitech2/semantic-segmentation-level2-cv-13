@@ -208,7 +208,7 @@ def main():
     train_dataloader = DataLoader(train_dataset, **cfgs.train_dataloader.args._asdict(), collate_fn=collate_fn)
     
     val_dataset_module = getattr(import_module("dataset"), cfgs.val_dataset.name)
-    val_dataset = val_dataset_module(cfgs.data_root, cfgs.train_json_path, **cfgs.val_dataset.args._asdict(), transform = val_transform)
+    val_dataset = val_dataset_module(cfgs.data_root, cfgs.val_json_path, **cfgs.val_dataset.args._asdict(), transform = val_transform)
     val_dataloader = DataLoader(val_dataset, **cfgs.val_dataloader.args._asdict(), collate_fn = collate_fn)
 
     model_module = getattr(import_module("model"), cfgs.model.name)
