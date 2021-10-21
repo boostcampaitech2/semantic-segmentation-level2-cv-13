@@ -3,10 +3,18 @@ from utils import label_accuracy_score, add_hist
 from dataset import *
 import torch
 from torch.utils.data import DataLoader
+
 import json
 import argparse
 from collections import namedtuple
 from importlib import import_module
+
+# randomness control
+import random
+import numpy as np
+
+import warnings
+warnings.filterwarnings('ignore')
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -15,12 +23,27 @@ import wandb
 import matplotlib.pyplot as plt
 import seaborn as sns; sns.set(rc={'figure.figsize':(12,12)})
 
+# logging date
+from datetime import datetime
+
 
 category_names = ['Backgroud','General trash','Paper',
                     'Paper pack', 'Metal', 'Glass',
                     'Plastic', 'Styrofoam', 'Plastic bag',
                     'Battery', 'Clothing']
 category_dicts = {k:v for k,v in enumerate(category_names)}
+
+cur_date = datetime.today().strftime("%Sy%m%d")
+
+def fix_seed():
+    random_seed = 0
+    torch.manual_seed(random_seed)
+    torch.cuda.manual_seed(random_seed)
+    torch.cuda.manual_seed_all(random_seed) # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(random_seed)
+    random.seed(random_seed)
 
 def collate_fn(batch):
     return tuple(zip(*batch))
@@ -61,19 +84,20 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
             
             hist = add_hist(hist, masks, outputs, n_class=n_class)
 
-            example_images.append(wandb.Image(
-                images[0],
-                masks = {
-                    "predictions": {
-                        "mask_data": outputs[0],
-                        "class_labels": category_dicts
-                    },
-                    "ground_truth":{
-                        "mask_data": masks[0],
-                        "class_labels": category_dicts
+            if step % 10 == 0:
+                example_images.append(wandb.Image(
+                    images[0],
+                    masks = {
+                        "predictions": {
+                            "mask_data": outputs[0],
+                            "class_labels": category_dicts
+                        },
+                        "ground_truth":{
+                            "mask_data": masks[0],
+                            "class_labels": category_dicts
+                        }
                     }
-                }
-            ))
+                ))
         
         acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
         #IoU_by_class = [{classes : round(IoU,4)} for IoU, classes in zip(IoU , category_names)]
@@ -95,14 +119,15 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
         })
         
         if epoch == num_epochs:
-            return avrg_loss, IoU_by_class, hist
+            return avrg_loss, mIoU, IoU_by_class, hist
         
-    return avrg_loss
+    return avrg_loss, mIoU
 
-def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, saved_dir, val_every, device):
+def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, saved_dir, val_every, save_mode, device):
     print(f'Start training..')
     n_class = 11
     best_loss = 9999999
+    best_miou = 0
     
     for epoch in range(num_epochs):
         model.train()
@@ -147,20 +172,33 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
         # validation 주기에 따른 loss 출력 및 best model 저장
         if (epoch + 1) % val_every == 0:
             if epoch+1 < num_epochs:
-                avrg_loss = validation(epoch+1, num_epochs, model, val_loader, criterion, device)
+                avrg_loss, miou = validation(epoch+1, num_epochs, model, val_loader, criterion, device)
             else:
-                avrg_loss, class_iou, hist = validation(epoch+1, num_epochs, model, val_loader, criterion, device)
+                avrg_loss, miou, class_iou, hist = validation(epoch+1, num_epochs, model, val_loader, criterion, device)
             
-            if avrg_loss < best_loss:
-                print(f"Best performance at epoch: {epoch + 1}")
-                print(f"Save model in {saved_dir}")
-                best_loss = avrg_loss
-                save_dir = os.path.dirname(saved_dir)
-                if not os.path.exists(saved_dir):
-                    os.makedirs(saved_dir)
-                save_model(model, saved_dir)
+            # save_mode에 따라 모델 저장
+            if save_mode == "loss": # loss에 따라 모델 저장
+                if avrg_loss < best_loss:
+                    print(f"Best performance at epoch: {epoch + 1}")
+                    print(f"Save model in {saved_dir}")
+                    best_loss = avrg_loss
+                    #save_dir = os.path.dirname(saved_dir)
+                    if not os.path.exists(saved_dir):
+                        os.makedirs(saved_dir)
+                    save_model(model, saved_dir, file_name=f"{model.__name__}_{best_loss}_{cur_date}.pt")
+                    
+            else: # miou 기준 모델 저장
+                if miou > best_miou:
+                    print(f"Best performance at epoch: {epoch + 1}")
+                    print(f"Save model in {saved_dir}")
+                    best_miou = miou
+                    #save_dir = os.path.dirname(saved_dir)
+                    if not os.path.exists(saved_dir):
+                        os.makedirs(saved_dir)
+                    save_model(model, saved_dir, file_name=f"{model.__name__}_{best_miou}_{cur_date}.pt")
 
-    # heatmap    
+
+    #heatmap    
     ax = plt.subplots(figsize=(12,12))
     ax = sns.heatmap(hist/np.sum(hist, axis=1).reshape(-1,1), annot = True, cmap = 'Blues', fmt = ".4f") # gt 중에서 해당 prediction이 차지하는 비율이 얼마나 되는지
     ax.set_title("Confusion Matrix for the latest results")
@@ -223,6 +261,7 @@ def main():
                                 shuffle=False,
                                 collate_fn=collate_fn)
 
+    print(train_dataset)
     num_classes = train_dataset.num_classes
 
     model_module = getattr(import_module("model"), cfgs.model)
@@ -242,9 +281,10 @@ def main():
     
     optimizer = optimizer_module(params = model.parameters(), lr = cfgs.lr, weight_decay=1e-6)
 
-    train(cfgs.num_epochs, model, train_dataloader, val_dataloader, criterion, optimizer, cfgs.saved_dir, cfgs.val_every, device)
+    train(cfgs.num_epochs, model, train_dataloader, val_dataloader, criterion, optimizer, cfgs.saved_dir, cfgs.val_every, cfgs.save_mode, device)
 
     wandb.run.finish()
 
 if __name__ == "__main__":
+    fix_seed()
     main()
