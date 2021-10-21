@@ -27,9 +27,7 @@ def test(model, test_loader, device):
     preds_array = np.empty((0, size*size), dtype=np.compat.long)
     
     with torch.no_grad():
-        for step, (imgs, image_infos) in tqdm(enumerate(test_loader)):
-            if step % 10 == 0:
-                print(f"Step: {step+1}")
+        for imgs, image_infos in tqdm(test_loader):
             # inference (512 x 512)
             outs = model(torch.stack(imgs).to(device))['out']
             oms = torch.argmax(outs.squeeze(), dim=1).detach().cpu().numpy()
