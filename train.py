@@ -99,7 +99,7 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
         
     return avrg_loss
 
-def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, saved_dir, val_every, device):
+def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, saved_dir, val_every, device, scheduler = None):
     print(f'Start training..')
     n_class = 11
     best_loss = 9999999
@@ -126,6 +126,8 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            if scheduler and ((step+1)%4==0 or (step+1)==len(train_loader)):
+                scheduler.step()
             
             if isinstance(outputs, list):
                 outputs = outputs[1]
@@ -228,7 +230,18 @@ def main():
 
     optimizer = optimizer_module(model.parameters(), **cfgs.optimizer.args._asdict())
 
-    train(cfgs.num_epochs, model, train_dataloader, val_dataloader, criterion, optimizer, cfgs.saved_dir, cfgs.val_every, device)
+    try:
+        if hasattr(import_module("scheduler"), cfgs.scheduler.name):
+            scheduler_module = getattr(import_module("scheduler"), cfgs.scheduler.name)
+            scheduler = scheduler_module(optimizer, **cfgs.scheduler.args._asdict())
+        else:
+            scheduler_module = getattr(import_module("torch.optim.lr_scheduler"), cfgs.scheduler.name)
+            scheduler = scheduler_module(optimizer, **cfgs.scheduler.args._asdict())
+    except AttributeError :
+            print('There is no Scheduler.')
+            scheduler = None
+    
+    train(cfgs.num_epochs, model, train_dataloader, val_dataloader, criterion, optimizer, cfgs.saved_dir, cfgs.val_every, device, scheduler)
 
     wandb.run.finish()
 

@@ -1,9 +1,9 @@
 {
     "seed": 2021,
     "saved_dir" : "./tmp",
-    "data_root" : "../input/data",
-    "train_json_path" : "../input/data/train_all.json",
-    "test_json_path" : "../input/data/test.json",
+    "data_root" : "../segmentation/input/data",
+    "train_json_path" : "../segmentation/input/data/train_all.json",
+    "test_json_path" : "../segmentation/input/data/test.json",
     "train_dataset" : {"name" : "TrainDataset",
                        "args" : {"mode" : "train",
                                  "fold" : 0,
@@ -36,6 +36,9 @@
     "optimizer": {"name" : "Adam",
                   "args" : {"lr" : 0.0001,
                             "weight_decay" : 1e-6}},
+    "scheduler":{"name":"StepLR",
+                 "args":{"gamma":0.1,
+                         "step_size":1}},
     "val_every" : 1,
     "wandb_prj_name": "semseg",
     "wandb_run_name": "fcn_test"
