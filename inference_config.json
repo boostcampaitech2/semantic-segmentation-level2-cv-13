@@ -1,0 +1,13 @@
+{
+    "seed": 0,
+    "data_root": "../input/data",
+    "json_path" : "../input/data/test.json",
+    "sample_submission_path": "../baseline_code/submission/sample_submission.csv",
+    "dataset": "TestDataset",
+    "model_name": "FCN_resnet50",
+    "weight_path": "./results/fcn_resnet50_best_model(pretrained).pt",
+    "output_path": "./submission",
+    "num_classes": 11,
+    "batch_size": 8,
+    "num_workers": 4
+}

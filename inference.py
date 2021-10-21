@@ -54,11 +54,7 @@ def test(model, test_loader, device):
 
 def arg_parse():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default="FCN_resnet50")
-    parser.add_argument("--weight_path", type=str, default="./results/fcn_resnet50_best_model(pretrained).pt")
-    parser.add_argument("--num_classes", type=int, default = 11)
-    parser.add_argument("--batch_size", type=int, default = 8)
-    parser.add_argument("--output_path", type=str, default = "./submission")
+    parser.add_argument("cfg", type=str)
     args = parser.parse_args()
 
     return args
@@ -68,20 +64,18 @@ if __name__ == "__main__":
     
     args = arg_parse()
 
+    with open(args.cfg, 'r') as f:
+        cfgs = json.load(f, object_hook=lambda d: namedtuple('x', d.keys())(*d.values()))
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model_name = args.model
-    model_path = args.weight_path
-    n_classes = args.num_classes
-    batch_size = args.batch_size
-    output_path = args.output_path
-    output_name = model_path.split("/")[-1].replace('.pt', "")
+    output_name = cfgs.weight_path.split("/")[-1].replace('.pt', "")
 
     # model arch
-    model_module = getattr(import_module("model"), model_name)
-    model = model_module(n_classes)
+    model_module = getattr(import_module("model"), cfgs.model)
+    model = model_module(cfgs.num_classes)
 
     # load model weights
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(cfgs.weight_path, map_location=device)
     state_dict = checkpoint.state_dict()
 
     model.load_state_dict(state_dict)
@@ -93,16 +87,16 @@ if __name__ == "__main__":
                                 ToTensorV2()
                                ])
 
-    test_dataset_module = getattr(import_module("dataset"), "TestDataset")
-    test_dataset = test_dataset_module(data_root = "../input/data", json_dir = "../input/data/test.json",
+    test_dataset_module = getattr(import_module("dataset"), cfgs.dataset)
+    test_dataset = test_dataset_module(data_root = cfgs.data_root, json_dir = cfgs.json_path,
                                        transform=test_transform)
     test_loader = DataLoader(dataset=test_dataset,
-                             batch_size=batch_size,
-                             num_workers=4,
+                             batch_size=cfgs.batch_size,
+                             num_workers=cfgs.num_workers,
                              collate_fn=collate_fn)
 
     # sample_submisson.csv 열기
-    submission = pd.read_csv(f'/opt/ml/segmentation/baseline_code/submission/sample_submission.csv', index_col=None)
+    submission = pd.read_csv(cfgs.sample_submission_path, index_col=None)
 
     # test set에 대한 prediction
     file_names, preds = test(model, test_loader, device)
@@ -113,6 +107,7 @@ if __name__ == "__main__":
                                     ignore_index=True)
 
     # submission.csv로 저장
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-    submission.to_csv(f"{output_path}/submission_{output_name}.csv", index=False)
+    if not os.path.exists(cfgs.output_path):
+        os.makedirs(cfgs.output_path)
+
+    submission.to_csv(f"{cfgs.output_path}/submission_{output_name}.csv", index=False)
