@@ -1,11 +1,11 @@
+from shutil import Error
 import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from utils import fix_seed
+from utils import fix_seed, arg_parse
 
 from importlib import import_module
-import argparse
 import tqdm
 import os
 import json
@@ -54,13 +54,6 @@ def test(model, test_loader, device):
     file_names = [y for x in file_name_list for y in x]
     
     return file_names, preds_array
-
-def arg_parse():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("cfg", type=str)
-    args = parser.parse_args()
-
-    return args
 
 
 if __name__ == "__main__":

@@ -1,11 +1,10 @@
 import os
-from utils import label_accuracy_score, add_hist, fix_seed
+from utils import label_accuracy_score, add_hist, fix_seed, arg_parse
 from dataset import *
 import torch
 from torch.utils.data import DataLoader
 
 import json
-import argparse
 from collections import namedtuple
 from importlib import import_module
 
@@ -204,13 +203,6 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
             "IoU by Class": wandb.plot.bar(wandb.Table(data=class_iou, columns=["label","value"]), "label","value", title="IoU by class")
         }
     )
-
-def arg_parse():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('cfg', type=str)
-    args = parser.parse_args()
-    
-    return args
 
 def main():
     args = arg_parse()
