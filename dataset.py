@@ -16,8 +16,8 @@ class TrainDataset(Dataset):
     category_names = ['Backgroud','General trash','Paper','Paper pack','Metal','Glass',
                       'Plastic','Styrofoam','Plastic bag','Battery','Clothing']
 
-    def __init__(self, data_root, json_dir, mode = "train", fold = 0, k = 5, cutmix_prob = 0.25, mixup_prob = 0.25, random_state = 923, transform = None):
-        
+    def __init__(self, data_root, json_dir, mode = "train", cutmix_prob = 0.25, mixup_prob = 0.25, transform = None):
+
         """ Trash Object Detection Train Dataset
         Args:
             data_root : root for data
@@ -25,9 +25,6 @@ class TrainDataset(Dataset):
             mode : "train" when you want to train, "validation" when you want to evaluate
             cutmix_prob : probability of applying a cutmix
             mixup_prob : probability of applying a mixup
-            fold : the order of fold to be learned
-            k : how many folds going to devided
-            random_state : random state of kfold
             transform : transform to be applied to the image
         """
         
@@ -39,32 +36,16 @@ class TrainDataset(Dataset):
         self.mixup_prob = mixup_prob
         self.transform = transform
         self.num_classes = len(self.category_names)
-
-        with open(json_dir) as f:
-            train = json.load(f)
-
-        self.coco = COCO(json_dir)
-        df_images = pd.json_normalize(train['images'])
-        df_annotations = pd.json_normalize(train['annotations'])
-        train_df = df_images.set_index('id').join(df_annotations.set_index('image_id'))
-        train_df['image_id'] = train_df.index
-        train_df['seg_area_cat'] = train_df['segmentation'].apply(self._get_area_cat)
-        train_df['cat'] = train_df['category_id'].astype(str) + "_" + train_df['seg_area_cat'].astype(str)
+        self.num_images = len(self.coco.imgs)
         
-        skf = StratifiedGroupKFold(n_splits = k, random_state = random_state, shuffle = True)
-        for i, (train_idx, val_idx) in enumerate(skf.split(train_df['id'], train_df['cat'], train_df['image_id'])):
-            if i == fold:
-                break
-
-        if self.mode == "train":
-            self.img_idx = train_df.iloc[train_idx]['image_id'].unique()
-        if self.mode == "validation":
-            self.img_idx = train_df.iloc[val_idx]['image_id'].unique()
+        self.img_idx = []
+        for coco_img in self.coco.imgs:
+            self.img_idx.append(coco_img)
 
 
     def __len__(self):
 
-        return len(self.img_idx)
+        return self.num_images
 
 
     def __getitem__(self, index):
@@ -72,17 +53,17 @@ class TrainDataset(Dataset):
         random_number = random.random()
         
         if self.mode == "validation":
-            image, mask, image_info = self.load_image_mask(index)
+            image, mask = self.load_image_mask(index)
 
         elif self.mode == "train":
             if random_number > 1-self.mixup_prob:
-                image, mask, image_info = self.load_mixup(index)
+                image, mask = self.load_mixup(index)
             elif random_number > 1 - self.mixup_prob - self.cutmix_prob:
-                image, mask, image_info = self.load_cutmix(index)
+                image, mask = self.load_cutmix(index)
                 if self.mixup_prob > 0:
                     mask = self.mask_to_prob(mask)
             else:
-                image, mask, image_info = self.load_image_mask(index)
+                image, mask = self.load_image_mask(index)
                 if self.mixup_prob > 0:
                     mask = self.mask_to_prob(mask)
 
@@ -91,7 +72,7 @@ class TrainDataset(Dataset):
             image = transformed["image"]
             mask = transformed["mask"]
 
-        return image, mask, image_info
+        return image, mask
 
     
     def load_image_mask(self, index):
@@ -113,26 +94,23 @@ class TrainDataset(Dataset):
             className = self.get_classname(anns[i]['category_id'], cats)
             pixel_value = self.category_names.index(className)
             mask[self.coco.annToMask(anns[i]) == 1] = pixel_value
-        mask = mask.astype(np.int8)        
+        mask = mask.astype(np.int8)
 
-        return image, mask, image_info
+        return image, mask
 
     def load_cutmix(self, index, img_size = 512):
 
         w, h = img_size, img_size
         s = img_size // 2
 
-        image_id = self.coco.getImgIds(imgIds = self.img_idx[index])
-        image_info = self.coco.loadImgs(image_id)[0]
-
         xc, yc = [int(random.uniform(img_size * 0.25, img_size * 0.75)) for _ in range(2)] 
-        indexes = [index] + [random.randint(0, len(self.img_idx) - 1) for _ in range(3)]
+        indexes = [index] + [random.randint(0, self.num_images - 1) for _ in range(3)]
 
         result_image = np.full((img_size, img_size, 3), 1, dtype = np.float32)
         result_mask = np.full((img_size, img_size), 0, dtype = np.int8)
 
         for i, index in enumerate(indexes):
-            image, mask, _ = self.load_image_mask(index)
+            image, mask = self.load_image_mask(index)
             if i == 0:
                 x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc
                 
@@ -149,20 +127,17 @@ class TrainDataset(Dataset):
             result_image[y1a:y2a, x1a:x2a] = transformed['image']
             result_mask[y1a:y2a, x1a:x2a] = transformed['mask']
 
-        return result_image, result_mask, image_info
+        return result_image, result_mask
 
 
-    def load_mixup(self, index, img_size = 512):
+    def load_mixup(self, index):
 
         random_number = random.uniform(0.4, 0.6)
 
-        image_id = self.coco.getImgIds(imgIds = self.img_idx[index])
-        image_info = self.coco.loadImgs(image_id)[0]
+        indexes = [index, random.randint(0, self.num_images - 1)]
 
-        indexes = [index, random.randint(0, len(self.img_idx) - 1)]
-
-        image1, mask1, image_info1 = self.load_image_mask(indexes[0])
-        image2, mask2, image_info2 = self.load_image_mask(indexes[1])
+        image1, mask1 = self.load_image_mask(indexes[0])
+        image2, mask2 = self.load_image_mask(indexes[1])
 
         result_image = image1 * random_number + image2 * (1 - random_number)
 
@@ -171,7 +146,7 @@ class TrainDataset(Dataset):
         
         result_mask = mask1 * random_number + mask2 * (1 - random_number)
 
-        return result_image, result_mask, image_info
+        return result_image, result_mask
 
 
     def _get_area_cat(self, seg):
@@ -227,11 +202,15 @@ class TestDataset(Dataset):
         self.data_root = data_root
         self.transform = transform
         self.coco = COCO(json_dir)
+        self.num_images = len(self.coco.imgs)
+        self.img_idx = []
+        for coco_img in self.coco.imgs:
+            self.img_idx.append(coco_img)
 
         
     def __getitem__(self, index: int):
 
-        image_id = self.coco.getImgIds(imgIds=index)
+        image_id = self.coco.getImgIds(imgIds=self.img_idx[index])
         image_infos = self.coco.loadImgs(image_id)[0]
         
         images = cv2.imread(os.path.join(self.data_root, image_infos['file_name']))
@@ -240,9 +219,9 @@ class TestDataset(Dataset):
         if self.transform is not None:
             transformed = self.transform(image=images)
             images = transformed["image"]
-        return images, image_infos
+        return images
     
 
     def __len__(self):
    
-        return len(self.coco.getImgIds())
+        return len(self.num_images)

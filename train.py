@@ -41,7 +41,7 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
         cnt = 0
         
         hist = np.zeros((n_class, n_class))
-        for step, (images, masks, _) in enumerate(data_loader):
+        for step, (images, masks) in enumerate(data_loader):
             
             images = torch.stack(images)       
             masks = torch.stack(masks).long()  
@@ -108,7 +108,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
         model.train()
 
         hist = np.zeros((n_class, n_class))
-        for step, (images, masks, _) in enumerate(train_loader):
+        for step, (images, masks) in enumerate(train_loader):
             images = torch.stack(images)       
             masks = torch.stack(masks).long() 
             
@@ -212,7 +212,7 @@ def main():
     val_dataloader = DataLoader(val_dataset, **cfgs.val_dataloader.args._asdict(), collate_fn = collate_fn)
 
     model_module = getattr(import_module("model"), cfgs.model.name)
-    model = model_module(cfgs.model.args._asdict()).to(device)
+    model = model_module(**cfgs.model.args._asdict()).to(device)
     
     if hasattr(import_module("criterions"), cfgs.criterion.name):
         criterion_module = getattr(import_module("criterions"), cfgs.criterion.name)
