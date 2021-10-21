@@ -1,5 +1,5 @@
 import os
-from utils import label_accuracy_score, add_hist
+from utils import label_accuracy_score, add_hist, fix_seed
 from dataset import *
 import torch
 from torch.utils.data import DataLoader
@@ -35,20 +35,11 @@ category_dicts = {k:v for k,v in enumerate(category_names)}
 
 cur_date = datetime.today().strftime("%Sy%m%d")
 
-def fix_seed():
-    random_seed = 0
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
-    torch.cuda.manual_seed_all(random_seed) # if use multi-GPU
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    np.random.seed(random_seed)
-    random.seed(random_seed)
 
 def collate_fn(batch):
     return tuple(zip(*batch))
 
-def save_model(model, saved_dir, file_name='fcn_resnet50_best_model(pretrained).pt'):
+def save_model(model, saved_dir, file_name='hrnet_ocr.pt'):
     check_point = {'net': model.state_dict()}
     output_path = os.path.join(saved_dir, file_name)
     torch.save(model, output_path)
@@ -152,6 +143,8 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
             loss.backward()
             optimizer.step()
             
+            if isinstance(outputs, list):
+                outputs = outputs[1]
             outputs = torch.argmax(outputs, dim=1).detach().cpu().numpy()
             masks = masks.detach().cpu().numpy()
             
@@ -225,6 +218,9 @@ def main():
     with open(args.cfg, 'r') as f:
         cfgs = json.load(f, object_hook=lambda d: namedtuple('x', d.keys())(*d.values()))
 
+    # fix seed
+    fix_seed(cfgs.seed)
+    
     ## wandb logging init
     wandb.init(project=cfgs.wandb_prj_name, name=cfgs.wandb_run_name, entity="cval_seg")
 
@@ -239,52 +235,35 @@ def main():
                                ToTensorV2()
                               ])
 
-    train_dataset_module = getattr(import_module("dataset"), cfgs.train_dataset)
-    train_dataset = train_dataset_module(data_root = cfgs.data_root, json_dir = cfgs.train_json_path, mode = "train",
-                                         fold = cfgs.fold, k = cfgs.k,
-                                         cutmix_prob = cfgs.cutmix_prob, mixup_prob = cfgs.mixup_prob,
-                                         transform=train_transform)
-    train_dataloader = DataLoader(train_dataset,
-                                  batch_size=cfgs.train_batch_size,
-                                  num_workers=cfgs.num_workers,
-                                  shuffle=True,
-                                  collate_fn=collate_fn)
 
-    val_dataset_module = getattr(import_module("dataset"), cfgs.val_dataset)
-    val_dataset = val_dataset_module(data_root = cfgs.data_root, json_dir = cfgs.train_json_path, mode = "validation",
-                                       fold = cfgs.fold, k = cfgs.k,
-                                       cutmix_prob = cfgs.cutmix_prob, mixup_prob = cfgs.mixup_prob,
-                                       transform=val_transform)
-    val_dataloader = DataLoader(val_dataset,
-                                batch_size=cfgs.val_batch_size,
-                                num_workers=cfgs.num_workers,
-                                shuffle=False,
-                                collate_fn=collate_fn)
+    train_dataset_module = getattr(import_module("dataset"), cfgs.train_dataset.name)
+    train_dataset = train_dataset_module(cfgs.data_root, cfgs.train_json_path, **cfgs.train_dataset.args._asdict(), transform = train_transform)
+    train_dataloader = DataLoader(train_dataset, **cfgs.train_dataloader.args._asdict(), collate_fn=collate_fn)
+    
+    val_dataset_module = getattr(import_module("dataset"), cfgs.val_dataset.name)
+    val_dataset = val_dataset_module(cfgs.data_root, cfgs.train_json_path, **cfgs.val_dataset.args._asdict(), transform = val_transform)
+    val_dataloader = DataLoader(val_dataset, **cfgs.val_dataloader.args._asdict(), collate_fn = collate_fn)
 
-    print(train_dataset)
-    num_classes = train_dataset.num_classes
-
-    model_module = getattr(import_module("model"), cfgs.model)
-    model = model_module(num_classes).to(device)
-
-    if hasattr(import_module("criterions"), cfgs.criterion):
-        criterion_module = getattr(import_module("criterions"), cfgs.criterion)
+    model_module = getattr(import_module("model"), cfgs.model.name)
+    model = model_module(cfgs.model.args._asdict()).to(device)
+    
+    if hasattr(import_module("criterions"), cfgs.criterion.name):
+        criterion_module = getattr(import_module("criterions"), cfgs.criterion.name)
     else:
-        criterion_module = getattr(import_module("torch.nn"), cfgs.criterion)
+        criterion_module = getattr(import_module("torch.nn"), cfgs.criterion.name)
     
     criterion = criterion_module()
-    
-    if hasattr(import_module("optimizers"), cfgs.criterion):
-        optimizer_module = getattr(import_module("optimizers"), cfgs.optimizer)
+
+    if hasattr(import_module("optimizers"), cfgs.optimizer.name):
+        optimizer_module = getattr(import_module("optimizers"), cfgs.optimizer.name)
     else:
-        optimizer_module = getattr(import_module("torch.optim"), cfgs.optimizer)
-    
-    optimizer = optimizer_module(params = model.parameters(), lr = cfgs.lr, weight_decay=1e-6)
+        optimizer_module = getattr(import_module("torch.optim"), cfgs.optimizer.name)
+
+    optimizer = optimizer_module(model.parameters(), **cfgs.optimizer.args._asdict())
 
     train(cfgs.num_epochs, model, train_dataloader, val_dataloader, criterion, optimizer, cfgs.saved_dir, cfgs.val_every, cfgs.save_mode, device)
 
     wandb.run.finish()
 
 if __name__ == "__main__":
-    fix_seed()
     main()

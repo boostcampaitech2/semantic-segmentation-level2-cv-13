@@ -4,13 +4,25 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class custom_CrossEntropyLoss(nn.Module):
+
     def __init__(self):
         nn.Module.__init__(self)
         self.CEL = nn.CrossEntropyLoss()
 
-    def forward(self, pred, target):
-        return self.CEL(pred, target)
 
+    def forward(self, pred, target):
+      if isinstance(pred, list):
+            loss = 0
+            weights = [0.4, 1]
+            assert len(weights) == len(pred)
+            for i in range(len(pred)):
+                loss += self.CEL(pred[i], target) * weights[i]
+            return loss
+
+        else:
+            return self.CEL(pred, target)
+          
+          
 class mIoULoss(nn.Module):
     """
     code reference: https://discuss.pytorch.org/t/how-to-implement-soft-iou-loss/15152
@@ -47,31 +59,3 @@ class mIoULoss(nn.Module):
         n,h,w = target.size()
         one_hot = torch.zeros(n,self.classes,h,w).cuda().scatter_(1, target.view(n,1,h,w), 1)
         return one_hot
-
-
-class DiceLoss(nn.Module):
-    """
-    에러남. 수정해야됨.
-    """
-    def __init__(self):
-        super().__init__()
-    
-    def forward(self, pred, target, smooth = 1e-5):
-        # binary cross entropy loss
-        ce = F.cross_entropy(pred, target, reduction='sum')
-        
-        pred = torch.sigmoid(pred)
-        intersection = (pred * target).sum(dim=(2,3))
-        union = pred.sum(dim=(2,3)) + target.sum(dim=(2,3))
-        
-        # dice coefficient
-        dice = 2.0 * (intersection + smooth) / (union + smooth)
-        
-        # dice loss
-        dice_loss = 1.0 - dice
-        
-        # total loss
-        loss = ce + dice_loss
-        
-        #return loss.sum(), dice.sum()
-        return loss.sum()
