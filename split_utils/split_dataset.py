@@ -132,11 +132,11 @@ if __name__=="__main__":
         #     trn_json = rm_outlier(trn_json, args.rm_bbox, args.rm_wh)
         # #    val_json = rm_outlier(val_json, args.rm_bbox, args.rm_wh)
 
-        # with open(args.json_save_folder + f'/train_split_{fold}.json', 'w') as fp:
-        #     json.dump(trn_json, fp)
+        with open(args.json_save_folder + f'/train_split_{fold}.json', 'w') as fp:
+            json.dump(trn_json, fp)
 
-        # with open(args.json_save_folder + f'/valid_split_{fold}.json', 'w') as fp:
-        #     json.dump(val_json, fp)
+        with open(args.json_save_folder + f'/valid_split_{fold}.json', 'w') as fp:
+            json.dump(val_json, fp)
         
         # 잘 나뉘는지 결과 검증을 위한 부분
         dev_groups, val_groups = train_df['image_id'][trn_idx], train_df['image_id'][val_idx]    
