@@ -2,6 +2,7 @@ from numpy.lib.arraysetops import union1d
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import segmentation_models_pytorch as smp
 
 class custom_CrossEntropyLoss(nn.Module):
 
@@ -59,3 +60,54 @@ class mIoULoss(nn.Module):
         n,h,w = target.size()
         one_hot = torch.zeros(n,self.classes,h,w).cuda().scatter_(1, target.view(n,1,h,w), 1)
         return one_hot
+
+
+class DiceLoss(nn.Module):
+
+    def __init__(self):
+
+        super().__init__()
+        self.DL = smp.losses.DiceLoss(mode = "multiclass")
+
+    def forward(self, pred, target):
+        if isinstance(pred, list):
+            loss = 0
+            weights = [0.4, 1]
+            assert len(weights) == len(pred)
+            for i in range(len(pred)):
+                loss += self.DL(pred[i], target) * weights[i]
+            return loss
+
+        else:
+            return self.DL(pred, target)
+
+
+class DiceCELoss(nn.Module):
+
+    def __init__(self):
+
+        super().__init__()
+        self.DL = DiceLoss()
+        self.CEL = custom_CrossEntropyLoss()
+
+    def forward(self, pred, target):
+        return 0.5 * self.DL(pred, target) + 0.5 * self.CEL(pred, target)
+
+
+class FocalLoss(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.FL = smp.losses.FocalLoss(mode = "multiclass")
+
+    def forward(self, pred, target):
+        if isinstance(pred, list):
+            loss = 0
+            weights = [0.4, 1]
+            assert len(weights) == len(pred)
+            for i in range(len(pred)):
+                loss += self.FL(pred[i], target) * weights[i]
+            return loss
+
+        else:
+            return self.FL(pred, target)
