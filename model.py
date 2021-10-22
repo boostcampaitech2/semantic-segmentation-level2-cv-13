@@ -10,6 +10,7 @@ import argparse
 from importlib import import_module
 
 class FCN_resnet50(nn.Module):
+    model_name = "FCN_resnet50"
     def __init__(self, target_size=512, num_classes = 11):
         super().__init__()
         self.num_classes = num_classes
@@ -20,6 +21,7 @@ class FCN_resnet50(nn.Module):
         return self.fcn(x)
 
 class DeepLabV3_resnet101(nn.Module):
+    model_name = "DeepLabV3_resnet101"
     def __init__(self, num_classes=11, target_size=256):
         super().__init__()
         self.num_classes = num_classes
@@ -30,7 +32,7 @@ class DeepLabV3_resnet101(nn.Module):
         return self.deeplab(x)
 
 class HRNetOCR(nn.Module):
-
+    model_name = "HRNetOCR"
     def __init__(self, num_classes = 11, target_size = 512, mode = "train"):
 
         super().__init__()
