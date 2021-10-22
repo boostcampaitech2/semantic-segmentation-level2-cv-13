@@ -97,8 +97,13 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
                 mIoU: {round(mIoU, 4)}')
         print('IoU by class')
         for idx in range(0,len(IoU_by_class)-1,2):
-            print(f'{IoU_by_class[idx][0]}: {IoU_by_class[idx][1]:.4f}', end='    ')
-            print(f'{IoU_by_class[idx+1][0]}: {IoU_by_class[idx+1][1]:.4f}')
+            if idx != len(IoU_by_class)-3:
+                print(f'{IoU_by_class[idx][0]}: {IoU_by_class[idx][1]:.4f}', end='    ')
+                print(f'{IoU_by_class[idx+1][0]}: {IoU_by_class[idx+1][1]:.4f}')
+            else:
+                print(f'{IoU_by_class[idx][0]}: {IoU_by_class[idx][1]:.4f}', end='    ')
+                print(f'{IoU_by_class[idx+1][0]}: {IoU_by_class[idx+1][1]:.4f}', end='    ')
+                print(f'{IoU_by_class[idx+2][0]}: {IoU_by_class[idx+2][1]:.4f}')
 
         wandb.log({
             "Predicted Images with GT": example_images,
