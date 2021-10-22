@@ -12,6 +12,8 @@ from importlib import import_module
 # randomness control
 import random
 import numpy as np
+from tqdm import tqdm
+import time
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -43,7 +45,6 @@ def save_model(model, saved_dir, file_name):
 
 
 def validation(epoch, num_epochs, model, data_loader, criterion, device):
-    print(f'Start validation #{epoch}')
     model.eval()
 
     example_images = []
@@ -51,9 +52,10 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
         n_class = 11
         total_loss = 0
         cnt = 0
-        
+
         hist = np.zeros((n_class, n_class))
-        for step, (images, masks) in enumerate(data_loader):
+        pbar = tqdm(enumerate(data_loader), total=len(data_loader))
+        for step, (images, masks) in pbar:
             
             images = torch.stack(images)       
             masks = torch.stack(masks).long()  
@@ -87,14 +89,16 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
                         }
                     }
                 ))
-        
-        acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
+            
+            acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
+            avrg_loss = total_loss / cnt
+            
+            description = f'Validation #{epoch}  Average Loss: {round(avrg_loss.item(), 4)}' 
+            description += f', Accuracy : {round(acc, 4)}, mIoU: {round(mIoU, 4)}'
+            pbar.set_description(description)
+
         #IoU_by_class = [{classes : round(IoU,4)} for IoU, classes in zip(IoU , category_names)]
         IoU_by_class = [[c,IoU] for IoU,c in zip(IoU, category_names)]
-        
-        avrg_loss = total_loss / cnt
-        print(f'Validation #{epoch}  Average Loss: {round(avrg_loss.item(), 4)}, Accuracy : {round(acc, 4)}, \
-                mIoU: {round(mIoU, 4)}')
         print('IoU by class')
         for idx in range(0,len(IoU_by_class)-1,2):
             if idx != len(IoU_by_class)-3:
@@ -126,8 +130,11 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
     for epoch in range(num_epochs):
         model.train()
 
+        running_loss = None
         hist = np.zeros((n_class, n_class))
-        for step, (images, masks) in enumerate(train_loader):
+
+        pbar = tqdm(enumerate(train_loader), total = len(train_loader))
+        for step, (images, masks) in pbar:
             images = torch.stack(images)       
             masks = torch.stack(masks).long() 
             
@@ -145,6 +152,11 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+            if running_loss is None:
+                running_loss = loss.item()
+            else:
+                running_loss = running_loss * .99 + loss.item() * .01
             
             if isinstance(outputs, list):
                 outputs = outputs[1]
@@ -153,11 +165,14 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
             
             hist = add_hist(hist, masks, outputs, n_class=n_class)
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
+           
+          
+            description =  f'Epoch [{epoch+1}/{num_epochs}], Step [{step+1}/{len(train_loader)}]: ' 
+            description += f'running Loss: {round(running_loss,4)}, mIoU: {round(mIoU,4)}'
+            pbar.set_description(description)
             
-            # step 주기에 따른 loss 출력
+            # step 주기에 따른 loss 출력(wadnb는 따로)
             if (step + 1) % 25 == 0:
-                print(f'Epoch [{epoch+1}/{num_epochs}], Step [{step+1}/{len(train_loader)}], \
-                        Loss: {round(loss.item(),4)}, mIoU: {round(mIoU,4)}')
                 wandb.log(
                     {
                         "Train Loss": round(loss.item(), 4),
