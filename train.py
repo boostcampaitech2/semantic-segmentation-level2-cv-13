@@ -45,7 +45,6 @@ def save_model(model, saved_dir, file_name):
 
 
 def validation(epoch, num_epochs, model, data_loader, criterion, device):
-    print(f'Start validation #{epoch}')
     model.eval()
 
     example_images = []
@@ -93,10 +92,10 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
             
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
             avrg_loss = total_loss / cnt
-            if (step + 1) % 1 == 0:
-                description = f'Validation #{epoch}  Average Loss: {round(avrg_loss.item(), 4)}' 
-                description += f', Accuracy : {round(acc, 4)}, mIoU: {round(mIoU, 4)}'
-                pbar.set_description(description)
+            
+            description = f'Validation #{epoch}  Average Loss: {round(avrg_loss.item(), 4)}' 
+            description += f', Accuracy : {round(acc, 4)}, mIoU: {round(mIoU, 4)}'
+            pbar.set_description(description)
 
         #IoU_by_class = [{classes : round(IoU,4)} for IoU, classes in zip(IoU , category_names)]
         IoU_by_class = [[c,IoU] for IoU,c in zip(IoU, category_names)]
@@ -161,12 +160,14 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
             
             hist = add_hist(hist, masks, outputs, n_class=n_class)
             acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
+           
+          
+            description =  f'Epoch [{epoch+1}/{num_epochs}], Step [{step+1}/{len(train_loader)}]: ' 
+            description += f'running Loss: {round(running_loss,4)}, mIoU: {round(mIoU,4)}'
+            pbar.set_description(description)
             
-            # step 주기에 따른 loss 출력
-            if (step + 1) % 1 == 0:
-                description =  f'Epoch [{epoch+1}/{num_epochs}], Step [{step+1}/{len(train_loader)}]: ' 
-                description += f'running Loss: {round(running_loss,4)}, mIoU: {round(mIoU,4)}'
-                pbar.set_description(description)
+            # step 주기에 따른 loss 출력(wadnb는 따로)
+            if (step + 1) % 25 == 0:
                 wandb.log(
                     {
                         "Train Loss": round(loss.item(), 4),
