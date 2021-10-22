@@ -1,9 +1,9 @@
 {
     "seed": 0,
     "saved_dir" : "./results",
-    "data_root" : "../segmentation/input/data",
-    "train_json_path" : "/opt/ml/segmentation/input/split_json/train_split_0.json",
-    "val_json_path" : "/opt/ml/segmentation/input/split_json/valid_split_0.json",
+    "data_root" : "../input/data",
+    "train_json_path" : "./splited_json/train_split_0.json",
+    "val_json_path" : "./splited_json/valid_split_0.json",
     "train_dataset" : {"name" : "TrainDataset",
                        "args" : {"mode" : "train",
                                  "cutmix_prob" : 0,
@@ -38,8 +38,8 @@
                 "T_up": 3,
                 "gamma": 0.6}},
     "val_every" : 1,
-    "wandb_prj_name": "DJ_project",
-    "wandb_run_name": "test1",
+    "wandb_prj_name": "",
+    "wandb_run_name": "",
     "save_mode": "miou",
-    "fp16": true
+    "fp16": false
 }
