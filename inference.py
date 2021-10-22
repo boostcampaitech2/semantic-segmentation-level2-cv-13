@@ -75,15 +75,12 @@ if __name__ == "__main__":
     model.load_state_dict(state_dict)
     model = model.to(device)
 
-    # TTA
-    test_transform = A.Compose([
-                                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                                ToTensorV2()
-                               ])
+    test_augmentation_module = getattr(import_module("augmentation"), cfgs.augmentation)
+    test_augmentation = test_augmentation_module().transform
 
     test_dataset_module = getattr(import_module("dataset"), cfgs.dataset)
     test_dataset = test_dataset_module(data_root = cfgs.data_root, json_dir = cfgs.json_path,
-                                       transform=test_transform)
+                                       transform=test_augmentation)
     test_loader = DataLoader(dataset=test_dataset,
                              **cfgs.dataloader.args._asdict(),
                              collate_fn=collate_fn)
