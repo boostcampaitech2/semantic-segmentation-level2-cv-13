@@ -1,11 +1,8 @@
 from torch.utils.data import Dataset
 from pycocotools.coco import COCO
 import albumentations as A
-import pandas as pd
 import numpy as np
 import random
-import torch
-import json
 import cv2
 import os
 
@@ -217,7 +214,7 @@ class TestDataset(Dataset):
         if self.transform is not None:
             transformed = self.transform(image=images)
             images = transformed["image"]
-        return images
+        return images, image_infos
     
 
     def __len__(self):
