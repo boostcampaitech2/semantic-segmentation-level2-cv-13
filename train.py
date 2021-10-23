@@ -4,6 +4,7 @@ from utils import label_accuracy_score, add_hist, fix_seed, arg_parse
 from dataset import *
 import torch
 from torch.utils.data import DataLoader
+from torch.cuda.amp import autocast, GradScaler
 
 import json
 from collections import namedtuple
@@ -57,13 +58,8 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
         pbar = tqdm(enumerate(data_loader), total=len(data_loader))
         for step, (images, masks) in pbar:
             
-            images = torch.stack(images)       
-            masks = torch.stack(masks).long()  
-
-            images, masks = images.to(device), masks.to(device)            
-            
-            # device 할당
-            model = model.to(device)
+            images = torch.stack(images).to(device)  
+            masks = torch.stack(masks).long().to(device)  
             
             outputs = model(images)['out']
             loss = criterion(outputs, masks)
@@ -121,12 +117,16 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
         
     return avrg_loss, mIoU
 
-def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, saved_dir, val_every, save_mode, device, scheduler = None):
+def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, saved_dir, val_every, save_mode, device, scheduler = None, fp16 = False):
     print(f'Start training..')
     n_class = 11
     best_loss = 9999999
     best_miou = 0
     
+    if fp16:
+        print("Mixed precision is applied")
+        scaler = GradScaler()
+
     for epoch in range(num_epochs):
         model.train()
 
@@ -135,23 +135,25 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
 
         pbar = tqdm(enumerate(train_loader), total = len(train_loader))
         for step, (images, masks) in pbar:
-            images = torch.stack(images)       
-            masks = torch.stack(masks).long() 
+            images = torch.stack(images).to(device)       
+            masks = torch.stack(masks).long().to(device) 
             
-            # gpu 연산을 위해 device 할당
-            images, masks = images.to(device), masks.to(device)
             
-            # device 할당
-            model = model.to(device)
-            
-            # inference
-            outputs = model(images)['out']
-            
-            # loss 계산 (cross entropy loss)
-            loss = criterion(outputs, masks)
             optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            if fp16:
+                with autocast():
+                    outputs = model(images)['out']
+                    loss = criterion(outputs, masks)
+                
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                outputs = model(images)['out']            
+                loss = criterion(outputs, masks)
+                loss.backward()
+                optimizer.step()
+
 
             if running_loss is None:
                 running_loss = loss.item()
@@ -284,7 +286,7 @@ def main():
             print('There is no Scheduler!')
             scheduler = None
 
-    train(cfgs.num_epochs, model, train_dataloader, val_dataloader, criterion, optimizer, cfgs.saved_dir, cfgs.val_every, cfgs.save_mode, device, scheduler)
+    train(cfgs.num_epochs, model, train_dataloader, val_dataloader, criterion, optimizer, cfgs.saved_dir, cfgs.val_every, cfgs.save_mode, device, scheduler, cfgs.fp16)
 
     wandb.run.finish()
 

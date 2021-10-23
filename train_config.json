@@ -24,7 +24,7 @@
     "train_augmentation": "BaseAugmentation",
     "val_augmentation": "BaseAugmentation",
     "num_epochs": 100,
-    "model": {"name" : "HRNetOCR",
+    "model": {"name" : "FCN_resnet50",
               "args" : {"num_classes" : 11,
                         "target_size" :512}},
     "criterion": {"name" : "custom_CrossEntropyLoss"},
@@ -38,7 +38,8 @@
                 "T_up": 3,
                 "gamma": 0.6}},
     "val_every" : 1,
-    "wandb_prj_name": "jy_seg_ocr",
-    "wandb_run_name": "ocr_pretrained_base",
-    "save_mode": "miou"
+    "wandb_prj_name": "",
+    "wandb_run_name": "",
+    "save_mode": "miou",
+    "fp16": false
 }
