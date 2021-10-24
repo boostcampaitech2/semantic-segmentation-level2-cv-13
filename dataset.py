@@ -184,8 +184,7 @@ class TrainDataset(Dataset):
         lst = []
         for i in range(img_size):
             lst.append(np.eye(11)[mask[i]])
-        mask = np.stack(lst)
-
+        mask = np.transpose(np.stack(lst), (2, 0, 1))
         return mask
 
 
