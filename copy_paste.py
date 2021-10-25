@@ -54,3 +54,6 @@ class CopyPaste(A.DualTransform):
         self.fn = self.train_df.iloc[self.idx]['file_name']
         self.new_img = cv2.imread(self.data_root + "/" + self.fn)
         self.seg = self.coco.annToMask(self.ann)
+
+    def get_transform_init_args_names(self):
+        return ()
