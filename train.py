@@ -1,5 +1,4 @@
 import os
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils import label_accuracy_score, add_hist, fix_seed, arg_parse
 from dataset import *
 import torch
@@ -11,13 +10,8 @@ from collections import namedtuple
 from importlib import import_module
 
 # randomness control
-import random
 import numpy as np
 from tqdm import tqdm
-import time
-
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
 
 import wandb
 import matplotlib.pyplot as plt
@@ -40,7 +34,6 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 def save_model(model, saved_dir, file_name):
-    check_point = {'net': model.state_dict()}
     output_path = os.path.join(saved_dir, file_name)
     torch.save(model, output_path)
 
@@ -49,13 +42,13 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
     model.eval()
 
     example_images = []
-    with torch.no_grad():
-        n_class = 11
-        total_loss = 0
-        cnt = 0
+    n_class = 11
+    total_loss = 0
 
-        hist = np.zeros((n_class, n_class))
-        pbar = tqdm(enumerate(data_loader), total=len(data_loader))
+    pbar = tqdm(enumerate(data_loader), total=len(data_loader))
+    
+    with torch.no_grad():
+        hist = torch.zeros((n_class, n_class), device=device)
         for step, (images, masks) in pbar:
             
             images = torch.stack(images).to(device)  
@@ -64,14 +57,22 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
             outputs = model(images)['out']
             loss = criterion(outputs, masks)
             total_loss += loss
-            cnt += 1
             
-            outputs = torch.argmax(outputs, dim=1).detach().cpu().numpy()
-            masks = masks.detach().cpu().numpy()
+            outputs = torch.argmax(outputs, dim=1)
             
             hist = add_hist(hist, masks, outputs, n_class=n_class)
 
+            acc, mIoU, IoU = label_accuracy_score(hist)
+            avrg_loss = total_loss / (step+1)
+            
+            description = f'Validation #{epoch}  Average Loss: {round(avrg_loss.item(), 4)}' 
+            description += f', Accuracy : {round(acc.item(), 4)}, mIoU: {round(mIoU.item(), 4)}'
+            pbar.set_description(description)
+            
+            # 10 step마다 wandb에 이미지 로깅
             if step % 10 == 0:
+                outputs = outputs.cpu().numpy()
+                masks = masks.cpu().numpy()
                 example_images.append(wandb.Image(
                     images[0],
                     masks = {
@@ -85,37 +86,38 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
                         }
                     }
                 ))
-            
-            acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
-            avrg_loss = total_loss / cnt
-            
-            description = f'Validation #{epoch}  Average Loss: {round(avrg_loss.item(), 4)}' 
-            description += f', Accuracy : {round(acc, 4)}, mIoU: {round(mIoU, 4)}'
-            pbar.set_description(description)
 
-        #IoU_by_class = [{classes : round(IoU,4)} for IoU, classes in zip(IoU , category_names)]
-        IoU_by_class = [[c,IoU] for IoU,c in zip(IoU, category_names)]
-        print('IoU by class')
-        for idx in range(0,len(IoU_by_class)-1,2):
-            if idx != len(IoU_by_class)-3:
-                print(f'{IoU_by_class[idx][0]}: {IoU_by_class[idx][1]:.4f}', end='    ')
-                print(f'{IoU_by_class[idx+1][0]}: {IoU_by_class[idx+1][1]:.4f}')
-            else:
-                print(f'{IoU_by_class[idx][0]}: {IoU_by_class[idx][1]:.4f}', end='    ')
-                print(f'{IoU_by_class[idx+1][0]}: {IoU_by_class[idx+1][1]:.4f}', end='    ')
-                print(f'{IoU_by_class[idx+2][0]}: {IoU_by_class[idx+2][1]:.4f}')
+    # gpu 메모리의 tensor를 cpu 메모리로 복사
+    acc = acc.item()
+    avrg_loss = avrg_loss.item()
+    mIoU = mIoU.item()
+    IoU = IoU.tolist()
 
-        wandb.log({
-            "Predicted Images with GT": example_images,
-            "Validation Accuracy": round(acc,4),
-            "Average Validation Loss": round(avrg_loss.item(), 4),
-            "Validation mIoU": round(mIoU, 4)
-        })
-        
-        if epoch == num_epochs:
-            return avrg_loss, mIoU, IoU_by_class, hist
-        
-    return avrg_loss, mIoU
+    IoU_by_class = [[c,IoU] for IoU,c in zip(IoU, category_names)]
+    print('IoU by class')
+    for idx in range(0,len(IoU_by_class)-1,2):
+        if idx != len(IoU_by_class)-3:
+            print(f'{IoU_by_class[idx][0]}: {IoU_by_class[idx][1]:.4f}', end='    ')
+            print(f'{IoU_by_class[idx+1][0]}: {IoU_by_class[idx+1][1]:.4f}')
+        else:
+            print(f'{IoU_by_class[idx][0]}: {IoU_by_class[idx][1]:.4f}', end='    ')
+            print(f'{IoU_by_class[idx+1][0]}: {IoU_by_class[idx+1][1]:.4f}', end='    ')
+            print(f'{IoU_by_class[idx+2][0]}: {IoU_by_class[idx+2][1]:.4f}')
+
+    wandb.log({
+        "Predicted Images with GT": example_images,
+        "Validation Accuracy": round(acc,4),
+        "Average Validation Loss": round(avrg_loss, 4),
+        "Validation mIoU": round(mIoU, 4)
+    })
+    
+    if epoch != num_epochs:
+        return avrg_loss, mIoU
+    else:
+        hist = hist.cpu().numpy()
+        return avrg_loss, mIoU, IoU_by_class, hist
+    
+    
 
 def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, saved_dir, val_every, save_mode, device, scheduler = None, fp16 = False):
     print(f'Start training..')
@@ -131,13 +133,12 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
         model.train()
 
         running_loss = None
-        hist = np.zeros((n_class, n_class))
+        hist = torch.zeros((n_class, n_class), device=device)
 
         pbar = tqdm(enumerate(train_loader), total = len(train_loader))
         for step, (images, masks) in pbar:
-            images = torch.stack(images).to(device)       
+            images = torch.stack(images).to(device)
             masks = torch.stack(masks).long().to(device) 
-            
             
             optimizer.zero_grad()
             if fp16:
@@ -162,23 +163,21 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
             
             if isinstance(outputs, list):
                 outputs = outputs[1]
-            outputs = torch.argmax(outputs, dim=1).detach().cpu().numpy()
-            masks = masks.detach().cpu().numpy()
-            
+            outputs = torch.argmax(outputs, dim=1)
+
             hist = add_hist(hist, masks, outputs, n_class=n_class)
-            acc, acc_cls, mIoU, fwavacc, IoU = label_accuracy_score(hist)
-           
+            _, mIoU, _ = label_accuracy_score(hist)
           
             description =  f'Epoch [{epoch+1}/{num_epochs}], Step [{step+1}/{len(train_loader)}]: ' 
-            description += f'running Loss: {round(running_loss,4)}, mIoU: {round(mIoU,4)}'
+            description += f'running Loss: {round(running_loss,4)}, mIoU: {round(mIoU.item(),4)}'
             pbar.set_description(description)
             
-            # step 주기에 따른 loss 출력(wadnb는 따로)
+            # 25 step마다 wandb에 loss 로깅
             if (step + 1) % 25 == 0:
                 wandb.log(
                     {
                         "Train Loss": round(loss.item(), 4),
-                        "Train mIoU": round(mIoU,4)
+                        "Train mIoU": round(mIoU.item(),4)
                     }
                 )
              
@@ -195,7 +194,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
                     print(f"Best performance at epoch: {epoch + 1}")
                     print(f"Save model in {saved_dir}")
                     best_loss = avrg_loss
-                    #save_dir = os.path.dirname(saved_dir)
+
                     if not os.path.exists(saved_dir):
                         os.makedirs(saved_dir)
                     save_model(model, saved_dir, file_name=f"{model.model_name}_{best_loss}_{cur_date}.pt")
@@ -205,7 +204,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, sav
                     print(f"Best performance at epoch: {epoch + 1}")
                     print(f"Save model in {saved_dir}")
                     best_miou = miou
-                    #save_dir = os.path.dirname(saved_dir)
+
                     if not os.path.exists(saved_dir):
                         os.makedirs(saved_dir)
                     save_model(model, saved_dir, file_name=f"{model.model_name}_{best_miou}_{cur_date}.pt")
