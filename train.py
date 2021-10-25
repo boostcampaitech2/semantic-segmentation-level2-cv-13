@@ -7,7 +7,6 @@ import re
 from importlib import import_module
 from pathlib import Path
 
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils import label_accuracy_score, add_hist, fix_seed, arg_parse
 from dataset import *
 import torch
