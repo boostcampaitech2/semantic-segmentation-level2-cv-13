@@ -63,6 +63,8 @@ def save_checkpoint(epoch, model, loss, miou, optimizer, saved_dir, scheduler, f
                     }
     if scheduler:
         check_point['scheduler_state_dict'] = scheduler.state_dict()
+    output_path = os.path.join(saved_dir, file_name)
+    torch.save(check_point, output_path)
 
 def load_checkpoint(checkpoint_path, model, optimizer, scheduler):
     # load model if resume_from is set
