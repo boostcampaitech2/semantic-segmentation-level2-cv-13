@@ -54,6 +54,8 @@ class HRNetOCR(nn.Module):
         return {'out' : x}
 
 class Unet(nn.Module):
+    model_name = "Unet"
+
     def __init__(self, encoder_name="efficientnet-b0", encoder_weights="imagenet", in_channels=3, classes=11):
         super().__init__()
         self.encoder_name = encoder_name
@@ -61,6 +63,101 @@ class Unet(nn.Module):
         self.in_channels = in_channels
         self.classes = classes
         self.model = smp.Unet(
+            encoder_name = self.encoder_name,
+            encoder_weights = self.encoder_weights,
+            in_channels = self.in_channels,
+            classes = self.classes
+        )
+    
+    def forward(self, x):
+        return {'out': self.model(x)}
+
+class DeepLabV3Plus(nn.Module):
+    model_name = "DeepLabV3Plus"
+
+    def __init__(self, encoder_name="efficientnet-b0", encoder_weights="imagenet", in_channels=3, classes=11):
+        super().__init__()
+        self.encoder_name = encoder_name
+        self.encoder_weights = encoder_weights
+        self.in_channels = in_channels
+        self.classes = classes
+        self.model = smp.DeepLabV3Plus(
+            encoder_name = self.encoder_name,
+            encoder_weights = self.encoder_weights,
+            in_channels = self.in_channels,
+            classes = self.classes
+        )
+    
+    def forward(self, x):
+        return {'out': self.model(x)}
+
+class MAnet(nn.Module):
+    model_name = "MAnet"
+
+    def __init__(self, encoder_name="efficientnet-b0", encoder_weights="imagenet", in_channels=3, classes=11):
+        super().__init__()
+        self.encoder_name = encoder_name
+        self.encoder_weights = encoder_weights
+        self.in_channels = in_channels
+        self.classes = classes
+        self.model = smp.MAnet(
+            encoder_name = self.encoder_name,
+            encoder_weights = self.encoder_weights,
+            in_channels = self.in_channels,
+            classes = self.classes
+        )
+    
+    def forward(self, x):
+        return {'out': self.model(x)}
+
+class Linknet(nn.Module):
+    model_name = "Linknet"
+
+    def __init__(self, encoder_name="efficientnet-b0", encoder_weights="imagenet", in_channels=3, classes=11):
+        super().__init__()
+        self.encoder_name = encoder_name
+        self.encoder_weights = encoder_weights
+        self.in_channels = in_channels
+        self.classes = classes
+        self.model = smp.Linknet(
+            encoder_name = self.encoder_name,
+            encoder_weights = self.encoder_weights,
+            in_channels = self.in_channels,
+            classes = self.classes
+        )
+    
+    def forward(self, x):
+        return {'out': self.model(x)}
+
+class PSPNet(nn.Module):
+    model_name = "PSPNet"
+
+    def __init__(self, encoder_name="efficientnet-b0", encoder_weights="imagenet", in_channels=3, classes=11):
+        super().__init__()
+        self.encoder_name = encoder_name
+        self.encoder_weights = encoder_weights
+        self.in_channels = in_channels
+        self.classes = classes
+        self.model = smp.PSPNet(
+            encoder_name = self.encoder_name,
+            encoder_weights = self.encoder_weights,
+            in_channels = self.in_channels,
+            classes = self.classes
+        )
+    
+    def forward(self, x):
+        return {'out': self.model(x)}
+
+class PAN(nn.Module):
+    model_name = "PAN"
+
+    def __init__(self, encoder_name="efficientnet-b0", encoder_weights="imagenet", in_channels=3, classes=11):
+        super().__init__()
+        self.encoder_name = encoder_name
+        self.encoder_weights = encoder_weights
+        self.in_channels = in_channels
+        self.classes = classes
+        self.model = smp.PAN(
             encoder_name = self.encoder_name,
             encoder_weights = self.encoder_weights,
             in_channels = self.in_channels,
