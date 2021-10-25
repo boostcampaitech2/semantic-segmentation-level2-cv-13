@@ -27,6 +27,8 @@
     "model": {"name" : "FCN_resnet50",
               "args" : {"num_classes" : 11,
                         "target_size" :512}},
+    "resume_from": false,
+    "checkpoint_path": "",
     "criterion": {"name" : "custom_CrossEntropyLoss"},
     "optimizer": {"name" : "Adam",
                   "args" : {"lr" : 0.00001,
