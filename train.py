@@ -245,10 +245,11 @@ def main():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    train_augmentation_module = getattr(import_module("augmentation"), cfgs.train_augmentation)
-    train_augmentation = train_augmentation_module().transform
-    val_augmentation_module = getattr(import_module("augmentation"), cfgs.val_augmentation)
-    val_augmentation = val_augmentation_module().transform
+    train_augmentation_module = getattr(import_module("augmentation"), cfgs.train_augmentation.name)
+    train_augmentation = train_augmentation_module(**cfgs.train_augmentation.args._asdict()).transform
+    
+    val_augmentation_module = getattr(import_module("augmentation"), cfgs.val_augmentation.name)
+    val_augmentation = val_augmentation_module(**cfgs.val_augmentation.args._asdict()).transform
 
     train_dataset_module = getattr(import_module("dataset"), cfgs.train_dataset.name)
     train_dataset = train_dataset_module(cfgs.data_root, cfgs.train_json_path, **cfgs.train_dataset.args._asdict(), transform = train_augmentation)
