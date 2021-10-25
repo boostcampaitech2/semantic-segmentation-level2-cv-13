@@ -2,6 +2,7 @@ from collections import namedtuple
 import os
 import glob
 import json
+import shutil
 import re
 from importlib import import_module
 from pathlib import Path
@@ -36,7 +37,7 @@ category_names = ['Backgroud','General trash','Paper',
                     'Battery', 'Clothing']
 category_dicts = {k:v for k,v in enumerate(category_names)}
 
-cur_date = datetime.today().strftime("%Sy%m%d")
+cur_date = datetime.today().strftime("%y%m%d")
 
 def increment_path(path, exist_ok=False):
     """
@@ -59,7 +60,7 @@ def increment_path(path, exist_ok=False):
         n = max(i) + 1 if i else 2
         return f"{path}{n}"
 
-def save_checkpoint(epoch, model, loss, miou, optimizer, saved_dir, file_name, scheduler = None):
+def save_checkpoint(epoch, model, loss, miou, optimizer, saved_dir, scheduler, file_name):
     check_point = {'epoch': epoch,
                     'net': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
@@ -80,7 +81,7 @@ def load_checkpoint(checkpoint_path, model, optimizer, scheduler):
         scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
     start_epoch = checkpoint['epoch']
     start_loss = checkpoint['loss']
-    prv_best_miou = checkpoint(['miou'])
+    prv_best_miou = checkpoint['miou']
 
     return model, optimizer, scheduler, start_epoch, start_loss, prv_best_miou
 
@@ -169,7 +170,6 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
     n_class = 11
     best_loss = 9999999
     best_miou = 0
-    saved_dir = increment_path(saved_dir)
 
     if resume_from:
         model, optimizer, scheduler, start_epoch, best_loss, best_miou = load_checkpoint(checkpoint_path, model, optimizer, scheduler)
@@ -249,7 +249,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
                     #save_dir = os.path.dirname(saved_dir)
                     if not os.path.exists(saved_dir):
                         os.makedirs(saved_dir)
-                    save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, file_name=f"{model.model_name}_{round(best_loss,3)}_{cur_date}.pt")
+                    save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, scheduler, file_name=f"{model.model_name}_{round(best_loss,3)}_{cur_date}.pt")
                     
             else: # miou 기준 모델 저장
                 if miou > best_miou:
@@ -260,7 +260,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
                     #save_dir = os.path.dirname(saved_dir)
                     if not os.path.exists(saved_dir):
                         os.makedirs(saved_dir)
-                    save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, file_name=f"{model.model_name}_{round(best_miou, 3)}_{cur_date}.pt")
+                    save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, scheduler, file_name=f"{model.model_name}_{round(best_miou, 3)}_{cur_date}.pt")
             
             # lr 조정
             if scheduler:
@@ -349,10 +349,11 @@ def main():
     
     # get a path to save checkpoints and config
     saved_dir = increment_path(f"{cfgs.saved_dir}/{cfgs.wandb_run_name}")
-    
+    if not os.path.exists(saved_dir):
+        os.makedirs(saved_dir)
+
     # save a config.json before training
-    with open(f"{saved_dir}/config.json", "wb") as f:
-        json.dumps(cfgs, f)
+    shutil.copy(args.cfg, f"{saved_dir}/config.json")
 
     # call train
     train_args = {
@@ -366,7 +367,7 @@ def main():
         'val_every': cfgs.val_every, 
         'save_mode': cfgs.save_mode, 
         'resume_from': cfgs.resume_from, 
-        'checkpoint_path': cfgs.checkpoint_path,
+        'checkpoint_path': cfgs.checkpoint_path, # absolute path
         'device': device,
         'scheduler': scheduler,
         'fp16': cfgs.fp16
