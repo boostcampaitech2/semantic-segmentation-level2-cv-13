@@ -13,6 +13,9 @@ from collections import namedtuple
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
+# tta
+import ttach as tta
+
 def collate_fn(batch):
     return tuple(zip(*batch))
 
@@ -74,6 +77,9 @@ if __name__ == "__main__":
 
     model.load_state_dict(state_dict)
     model = model.to(device)
+    if cfgs.tta:
+        tta_transform = getattr(import_module("ttach.aliases"), cfgs.tta.name)
+        model = tta.SegmentationTTAWrapper(model, tta_transform(**cfgs.tta.args._asdict()), output_mask_key = 'out')
 
     test_augmentation_module = getattr(import_module("augmentation"), cfgs.augmentation)
     test_augmentation = test_augmentation_module().transform
