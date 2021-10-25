@@ -12,5 +12,7 @@
               "args": {"num_classes": 11,
                        "target_size": 256}},
     "weight_path": "./results/fcn_resnet50_best_model(pretrained).pt",
-    "output_path": "./submission"    
+    "output_path": "./submission",
+    "tta" : {"name" : "d4_transform", 
+             "args" : {}}
 }
