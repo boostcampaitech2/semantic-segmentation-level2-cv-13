@@ -10,9 +10,9 @@ class BaseAugmentation:
             ])
 
 class BaseCopyPasteAugmentation:
-    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root = "../input/data", json_dir = "./splited_json/train_split_0.json"):
         self.transform = A.Compose([
-            CopyPaste(data_root = "../input/data", json_dir = "./splited_json/train_split_0.json", p = 1),
+            CopyPaste(data_root = data_root, json_dir = json_dir, p = 1),
             A.Normalize(mean=mean, std=std),
             ToTensorV2()
             ])
