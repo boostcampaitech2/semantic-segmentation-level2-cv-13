@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     # load model weights
     checkpoint = torch.load(cfgs.weight_path, map_location=device)
-    state_dict = checkpoint.state_dict()
+    state_dict = checkpoint['net']
 
     model.load_state_dict(state_dict)
     model = model.to(device)
