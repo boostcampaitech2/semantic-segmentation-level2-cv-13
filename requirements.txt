@@ -11,3 +11,4 @@ torchvision==0.10.1
 wandb==0.12.5
 segmentation-models-pytorch @ git+https://github.com/qubvel/segmentation_models.pytorch@35d79c1aa5fb26ba0b2c1ec67084c66d43687220
 ttach==0.0.3
+fastai
