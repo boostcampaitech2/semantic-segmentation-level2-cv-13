@@ -2,6 +2,7 @@ import torch.nn as nn
 from torchvision import models
 import yaml
 from hrnet.seg_hrnet_ocr import get_seg_model
+from unet_custom.unet_custom import get_unet_custom
 import torch.nn.functional as F
 
 import segmentation_models_pytorch as smp
@@ -166,3 +167,20 @@ class PAN(nn.Module):
     
     def forward(self, x):
         return {'out': self.model(x)}
+
+
+class Custom_Unet(nn.Module):
+    '''
+    config
+    "model": {"name" : "Custom_Unet",
+            "args" : {"stride" : 1, << ASPP dialation rate 
+                    "num_classes" :11}},
+    '''
+    model_name = 'Custom_Unet'
+    def __init__(self, stride = 1, num_classes=11):
+        super().__init__()
+        self.model = get_unet_custom(stride, num_classes)
+    
+    def forward(self, x):
+        x = self.model(x)
+        return {'out': x}
