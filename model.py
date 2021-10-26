@@ -1,7 +1,7 @@
 import torch.nn as nn
 from torchvision import models
 import yaml
-from hrnet.seg_hrnet_orc import get_seg_model
+from hrnet.seg_hrnet_ocr import get_seg_model
 import torch.nn.functional as F
 
 import segmentation_models_pytorch as smp
