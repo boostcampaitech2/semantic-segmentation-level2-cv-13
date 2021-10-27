@@ -29,18 +29,6 @@ def fix_seed(random_seed):
     random.seed(random_seed)
 
 
-# # https://github.com/wkentaro/pytorch-fcn/blob/master/torchfcn/utils.py
-
-def _fast_hist(label_true, label_pred, n_class):
-    """
-    make confusion matrix for a single image
-    """
-    mask = (label_true >= 0) & (label_true < n_class)
-    hist = np.bincount(n_class * label_true[mask].astype(int) + label_pred[mask],
-                       minlength=n_class ** 2).reshape(n_class, n_class)
-    return hist
-
-
 def label_accuracy_score(hist):
     """
     Returns accuracy score evaluation result.
@@ -68,7 +56,7 @@ def add_hist(hist, label_trues, label_preds, n_class):
 
     return hist
 
-
+# # https://github.com/wkentaro/pytorch-fcn/blob/master/torchfcn/utils.py
 def _fast_hist(label_true, label_pred, n_class):
     mask = (label_true >= 0) & (label_true < n_class)
     hist = torch.bincount(
