@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 from pycocotools.coco import COCO
+import torch
 import albumentations as A
 import numpy as np
 import random
@@ -66,16 +67,19 @@ class TrainDataset(Dataset):
             transformed = self.transform(image = image, mask = mask)
             image = transformed["image"]
             mask = transformed["mask"]
-
-        return image, mask
+        else:
+            image = torch.from_numpy(image)
+            mask = torch.from_numpy(mask)
+        
+        return image.float(), mask
 
     
     def load_image_mask(self, index):
         image_id = self.coco.getImgIds(imgIds = self.img_idx[index])
         image_info = self.coco.loadImgs(image_id)[0]
 
-        image = cv2.imread(os.path.join(self.data_root, image_info['file_name']))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+        image = cv2.imread(os.path.join(self.data_root, image_info['file_name']))   # uint8
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         ann_ids = self.coco.getAnnIds(imgIds=image_info['id'])
         anns = self.coco.loadAnns(ann_ids)
@@ -101,7 +105,7 @@ class TrainDataset(Dataset):
         xc, yc = [int(random.uniform(img_size * 0.25, img_size * 0.75)) for _ in range(2)] 
         indexes = [index] + [random.randint(0, self.num_images - 1) for _ in range(3)]
 
-        result_image = np.full((img_size, img_size, 3), 1, dtype = np.float32)
+        result_image = np.full((img_size, img_size, 3), 1, dtype = np.uint8)
         result_mask = np.full((img_size, img_size), 0, dtype = np.int8)
 
         for i, index in enumerate(indexes):
