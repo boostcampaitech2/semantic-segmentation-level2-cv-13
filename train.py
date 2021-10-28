@@ -191,7 +191,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
         for step, (images, masks) in pbar:
             images = torch.stack(images).to(device)
             masks = torch.stack(masks).long().to(device) 
-            
+  
             optimizer.zero_grad()
             if fp16:
                 with autocast():
@@ -265,7 +265,10 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
 
     #heatmap    
     ax = plt.subplots(figsize=(12,12))
-    ax = sns.heatmap(hist/np.sum(hist, axis=1).reshape(-1,1), annot = True, cmap = 'Blues', fmt = ".4f") # gt 중에서 해당 prediction이 차지하는 비율이 얼마나 되는지
+    heatmap_labels = [category_dicts[key] + "("+str(key)+")" for key in category_dicts]
+    ax = sns.heatmap(hist/np.sum(hist, axis=1).reshape(-1,1), xticklabels = heatmap_labels, yticklabels = heatmap_labels,  
+                     annot = True, cmap = 'Blues', fmt = ".4f") # gt 중에서 해당 prediction이 차지하는 비율이 얼마나 되는지
+    ax.tick_params(axis='x', rotation=30)
     ax.set_title("Confusion Matrix for the latest results")
     ax.set_xlabel("Prediction")
     ax.set_ylabel("Ground Truth")
