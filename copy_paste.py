@@ -72,24 +72,26 @@ class CopyPasteV2(A.DualTransform):
 
     기존과의 차이점은
     1. 기존에서는 클래별 추출 확률값을 줬지만, 여기서는 클래스별 추출 확률값을 주지 않는다.
-       클래스별 추출 확률값을 고려하지 않아도 경우에 해당 클래스를 쓰면 된다.
+       클래스별 추출 확률값을 고려하지 않아도 되는 경우에 해당 클래스를 쓰면 된다.
     2. Copy-Paste 대상이 되는 이미지와 마스크를 random하게 resize를 한다.
     3. Copy-Paste 대상이 되는 이미지와 마스크를 random하게 위치를 조정시킨다.
     4. Copy-Paste 대상이 되는 이미지와 마스크를 random하게 회전시킨다.
 
     Args:
         data_root (str): 이미지파일의 상위폴더 경로 (변경해줄 필요 없음)
-        json_dir (str): CopyPaste의 대상이 되는 json 파일
-        p (float): 해당 Copy-Paste가 적용되는 확률값
+        json_dir (str): Copy-Paste의 대상이 되는 json 파일
+        p (float): Copy-Paste가 적용되는 확률값
         min_resize (int): Copy-Paste 대상이 되는 이미지와 마스크를 random하게 resize를 할때,
                           bbox 최소 면적이 min_resize*min_resize되게 한다.
         max_resize (int): Copy-Paste 대상이 되는 이미지와 마스크를 random하게 resize를 할때,
                           bbox 최대 면적이 max_resize*max_resize되게 한다.
-        min_rotate (float): Copy-Paste 대상이 되는 이미지와 마스크를 random하게 회전시킬 떄,
+                          만약 대상이 되는 bbox의 면적이 max_resize*max_resize가 넘지 않는 경우,
+                          resize는 수행되지 않는다.
+        min_rotate (float): Copy-Paste 대상이 되는 이미지와 마스크를 random하게 회전시킬 때,
                             최소 각도
-        max_rotate (float): Copy-Paste 대상이 되는 이미지와 마스크를 random하게 회전시킬 떄,
+        max_rotate (float): Copy-Paste 대상이 되는 이미지와 마스크를 random하게 회전시킬 때,
                             최대 각도 
-        always_apply (bool): 항상 해당 augmentation의 적용 확률값이 1이 되게 할지 설정
+        always_apply (bool): 해당 augmentation의 적용 확률값이 항상 1이 되게 할지 설정
     '''
     def __init__(self, data_root="../input/data", json_dir="/opt/ml/segmentation/input/data/category_split_json/clothing_200_200.json", \
         p=0.5, min_resize=100, max_resize=150, min_rotate=-30, max_rotate=30, always_apply=False):
