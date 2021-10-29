@@ -1,12 +1,18 @@
-import torch.nn as nn
-from torchvision import models
-import yaml
 from hrnet.seg_hrnet_ocr import get_seg_model
-from unet_custom.unet_custom import get_unet_custom
+import segmentation_models_pytorch as smp
+import torch
+import torch.nn as nn
+import torchvision
+from torchvision import models
 import torch.nn.functional as F
+from unet_custom.unet_custom import get_unet_custom
+import yaml
+
+
 
 import segmentation_models_pytorch as smp
 from dpt.models import DPTSegmentationModel
+
 
 class FCN_resnet50(nn.Module):
     model_name = "FCN_resnet50"
@@ -187,6 +193,7 @@ class Custom_Unet(nn.Module):
         return {'out': x}
 
 
+
 class CustomDPTHybrid(nn.Module):
     model_name = "CustomDPTHybrid"
     def __init__(self, num_classes = 11, path = "./dpt/dpt_pretrained/dpt_hybrid-ade20k-53898607.pt"):
@@ -219,3 +226,105 @@ class CustomDPTLarge(nn.Module):
         else:
             x = self.model(x)[0]
         return {'out' : x}
+
+class DeformableConv2d(nn.Module):
+    """
+    Deformable Convolution v2 2d Layer
+
+    code reference: https://github.com/developer0hye/PyTorch-Deformable-Convolution-v2/blob/main/dcn.py
+    """
+    def __init__(self, 
+                 in_channels, 
+                 out_channels,
+                 kernel_size=3,
+                 stride=1,
+                 padding=1,
+                 bias=False,
+                 use_v2 = False):
+        
+        super(DeformableConv2d, self).__init__()
+
+        self.stride = stride if type(stride) == tuple else (stride, stride)
+        self.padding = padding
+        self.use_v2 = use_v2
+
+        self.offset_conv = nn.Conv2d(in_channels,
+                                    2*kernel_size*kernel_size,
+                                    kernel_size=kernel_size,
+                                    stride=stride,
+                                    padding=self.padding,
+                                    bias=True)
+        
+        nn.init.constant_(self.offset_conv.weight, 0.)
+        nn.init.constant_(self.offset_conv.bias, 0.)
+
+        if self.use_v2:
+            self.modulator_conv = nn.Conv2d(in_channels,
+                                            1*kernel_size*kernel_size,
+                                            kernel_size = kernel_size,
+                                            stride=stride,
+                                            padding=self.padding,
+                                            bias=True)
+
+            nn.init.constant_(self.modulator_conv.weight, 0.)
+            nn.init.constant_(self.modulator_conv.bias, 0.)
+        
+        else:
+            self.modulator_conv = None
+
+        self.regular_conv = nn.Conv2d(in_channels=in_channels,
+                                      out_channels = out_channels,
+                                      kernel_size=kernel_size,
+                                      stride=stride,
+                                      padding=self.padding,
+                                      bias=bias)
+
+    def forward(self, x):
+
+        offset = self.offset_conv(x)
+        
+        if self.use_v2:
+            modulator = 2. * torch.sigmoid(self.modulator_conv(x))
+
+        x = torchvision.ops.deform_conv2d(input=x,
+                                          offset=offset,
+                                          weight=self.regular_conv.weight,
+                                          bias=self.regular_conv.bias,
+                                          padding=self.padding,
+                                          mask=self.modulator_conv,
+                                          stride=self.stride)
+            
+        return x
+
+
+class DeformableDeepLabV3(nn.Module):
+    """
+    Deformable Convolutions applied to backbone of DL3
+    """
+    model_name = 'DeformableDeepLabV3'
+    def __init__(self,
+                 num_classes = 11,
+                 target_size = 256,
+                 use_v2 = False):
+        super(DeformableDeepLabV3, self).__init__()
+        self.deeplab = models.segmentation.deeplabv3_resnet101(pretrained=True)
+        self._deformable_conv(self.deeplab, use_v2)
+        self.deeplab.classifier[4] = nn.Conv2d(target_size, num_classes, kernel_size=1)
+        
+    def _deformable_conv(self, model, use_v2):
+
+        layers = [name for name, _ in model.backbone.named_children() if 'layer' in name]
+        if not use_v2:
+            layers = [layers[-1]]
+            
+        for layer in layers:
+            layer_ = getattr(model.backbone, layer)
+            for block in layer_[-3:]:
+                in_channels = getattr(block.conv2, "in_channels")
+                out_channels = getattr(block.conv2, 'out_channels')
+                block.conv2 = DeformableConv2d(in_channels, out_channels, use_v2 = use_v2)
+
+    def forward(self, x):
+        return self.deeplab(x)
+
+

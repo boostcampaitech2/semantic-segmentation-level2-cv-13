@@ -111,3 +111,15 @@ class FocalLoss(nn.Module):
 
         else:
             return self.FL(pred, target)
+
+
+class DiceFocalLoss(nn.Module):
+
+    def __init__(self):
+
+        super(DiceFocalLoss, self).__init__()
+        self.DL = DiceLoss()
+        self.FL = FocalLoss()
+
+    def forward(self, pred, target):
+        return 0.5*self.DL(pred, target) + 0.5 * self.FL(pred, target)
