@@ -19,6 +19,7 @@ class BaseCopyPasteAugmentation:
             ToTensorV2()
         ])
 
+
 class BaseCopyPasteV2Augmentation:
     def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root="../input/data", json_dir="/opt/ml/segmentation/input/data/category_split_json/metal_150*150.json"):
         self.transform = A.Compose([
@@ -26,6 +27,7 @@ class BaseCopyPasteV2Augmentation:
             A.Normalize(mean=mean, std=std),
             ToTensorV2()
         ])
+
 
 class NoAugmentation:
     def __init__(self):
