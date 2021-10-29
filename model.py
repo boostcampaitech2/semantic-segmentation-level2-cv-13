@@ -10,6 +10,10 @@ import yaml
 
 
 
+import segmentation_models_pytorch as smp
+from dpt.models import DPTSegmentationModel
+
+
 class FCN_resnet50(nn.Module):
     model_name = "FCN_resnet50"
     def __init__(self, num_classes = 11, target_size=512):
@@ -188,6 +192,41 @@ class Custom_Unet(nn.Module):
         x = self.model(x)
         return {'out': x}
 
+
+
+class CustomDPTHybrid(nn.Module):
+    model_name = "CustomDPTHybrid"
+    def __init__(self, num_classes = 11, path = "./dpt/dpt_pretrained/dpt_hybrid-ade20k-53898607.pt"):
+        super().__init__()
+        self.model = DPTSegmentationModel(150, path = path, backbone="vitb_rn50_384")
+        self.model.auxlayer[4] = nn.Conv2d(256, num_classes, kernel_size = 1)
+        self.model.scratch.output_conv[4] = nn.Conv2d(256, num_classes, kernel_size=1)
+    
+    def forward(self, x):
+        if self.training:
+            x = self.model(x)
+            x = [x[0], self.model.auxlayer(x[1])]
+        else:
+            x = self.model(x)[0]
+        return {'out' : x}
+
+
+class CustomDPTLarge(nn.Module):
+    model_name = "CustomDPTLarge"
+    def __init__(self, num_classes = 11, path = "./dpt/dpt_pretrained/dpt_large-ade20k-b12dca68.pt"):
+        super().__init__()
+        self.model = DPTSegmentationModel(150, path = path, backbone="vitl16_384")
+        self.model.auxlayer[4] = nn.Conv2d(256, num_classes, kernel_size = 1)
+        self.model.scratch.output_conv[4] = nn.Conv2d(256, num_classes, kernel_size=1)
+    
+    def forward(self, x):
+        if self.training:
+            x = self.model(x)
+            x = [x[0], self.model.auxlayer(x[1])]
+        else:
+            x = self.model(x)[0]
+        return {'out' : x}
+
 class DeformableConv2d(nn.Module):
     """
     Deformable Convolution v2 2d Layer
@@ -287,4 +326,5 @@ class DeformableDeepLabV3(nn.Module):
 
     def forward(self, x):
         return self.deeplab(x)
+
 

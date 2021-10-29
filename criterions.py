@@ -14,7 +14,7 @@ class custom_CrossEntropyLoss(nn.Module):
     def forward(self, pred, target):
         if isinstance(pred, list):
             loss = 0
-            weights = [0.4, 1]
+            weights = [1, 0.2]
             assert len(weights) == len(pred)
             for i in range(len(pred)):
                 loss += self.CEL(pred[i], target) * weights[i]
@@ -72,7 +72,7 @@ class DiceLoss(nn.Module):
     def forward(self, pred, target):
         if isinstance(pred, list):
             loss = 0
-            weights = [0.4, 1]
+            weights = [1, 0.2]
             assert len(weights) == len(pred)
             for i in range(len(pred)):
                 loss += self.DL(pred[i], target) * weights[i]
@@ -103,7 +103,7 @@ class FocalLoss(nn.Module):
     def forward(self, pred, target):
         if isinstance(pred, list):
             loss = 0
-            weights = [0.4, 1]
+            weights = [1, 0.2]
             assert len(weights) == len(pred)
             for i in range(len(pred)):
                 loss += self.FL(pred[i], target) * weights[i]
