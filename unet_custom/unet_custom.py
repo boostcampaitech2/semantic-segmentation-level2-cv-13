@@ -3,6 +3,80 @@ import torch
 import torch.hub
 from fastai.vision.all import PixelShuffle_ICNR, ConvLayer, NormType, F
 
+def conv3x3(in_channel, out_channel): #not change resolusion
+    return nn.Conv2d(in_channel,out_channel,
+                      kernel_size=3,stride=1,padding=1,dilation=1,bias=False)
+
+def conv1x1(in_channel, out_channel): #not change resolution
+    return nn.Conv2d(in_channel,out_channel,
+                      kernel_size=1,stride=1,padding=0,dilation=1,bias=False)
+
+def init_weight(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        #nn.init.xavier_uniform_(m.weight, gain=1)
+        #nn.init.xavier_normal_(m.weight, gain=1)
+        #nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
+        nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
+        #nn.init.orthogonal_(m.weight, gain=1)
+        if m.bias is not None:
+            m.bias.data.zero_()
+    elif classname.find('Batch') != -1:
+        m.weight.data.normal_(1,0.02)
+        m.bias.data.zero_()
+    elif classname.find('Linear') != -1:
+        nn.init.orthogonal_(m.weight, gain=1)
+        if m.bias is not None:
+            m.bias.data.zero_()
+    elif classname.find('Embedding') != -1:
+        nn.init.orthogonal_(m.weight, gain=1) 
+
+
+class ChannelAttentionModule(nn.Module):
+    def __init__(self, in_channel, reduction):
+        super().__init__()
+        self.global_maxpool = nn.AdaptiveMaxPool2d(1)
+        self.global_avgpool = nn.AdaptiveAvgPool2d(1) 
+        self.fc = nn.Sequential(
+            conv1x1(in_channel, in_channel//reduction).apply(init_weight),
+            nn.ReLU(True),
+            conv1x1(in_channel//reduction, in_channel).apply(init_weight)
+        )
+        
+    def forward(self, inputs):
+        x1 = self.global_maxpool(inputs)
+        x2 = self.global_avgpool(inputs)
+        x1 = self.fc(x1)
+        x2 = self.fc(x2)
+        x  = torch.sigmoid(x1 + x2)
+        return x
+
+class CBAM(nn.Module):
+    def __init__(self, in_channel, reduction):
+        super().__init__()
+        self.channel_attention = ChannelAttentionModule(in_channel, reduction)
+        self.spatial_attention = SpatialAttentionModule()
+        
+    def forward(self, inputs):
+        x = inputs * self.channel_attention(inputs)
+        x = x * self.spatial_attention(x)
+        return x
+
+    
+class SpatialAttentionModule(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv3x3 = conv3x3(2,1).apply(init_weight)
+        
+    def forward(self, inputs):
+        x1,_ = torch.max(inputs, dim=1, keepdim=True)
+        x2 = torch.mean(inputs, dim=1, keepdim=True)
+        x  = torch.cat([x1,x2], dim=1)
+        x  = self.conv3x3(x)
+        x  = torch.sigmoid(x)
+        return x
+
+
 class FPN(nn.Module):
     def __init__(self, input_channels:list, output_channels:list):
         super().__init__()
@@ -28,14 +102,17 @@ class UnetBlock(nn.Module):
         nf = nf if nf is not None else max(up_in_c//2,32)
         self.conv1 = ConvLayer(ni, nf, norm_type=None, **kwargs)
         self.conv2 = ConvLayer(nf, nf, norm_type=None,
-            xtra=SelfAttention(nf) if self_attention else None, **kwargs)
+            xtra=PooledSelfAttention2d(nf) if self_attention else None, **kwargs)
         self.relu = nn.ReLU(inplace=True)
-
+        self.cbam = CBAM(nf, 16)
+ 
     def forward(self, up_in:torch.Tensor, left_in:torch.Tensor) -> torch.Tensor:
         s = left_in
         up_out = self.shuf(up_in)
         cat_x = self.relu(torch.cat([up_out, self.bn(s)], dim=1))
-        return self.conv2(self.conv1(cat_x))
+        cat_x = self.cbam(self.conv1(cat_x))
+        return self.conv2(cat_x)
+
 
 class _ASPPModule(nn.Module):
     def __init__(self, inplanes, planes, kernel_size, padding, dilation, groups=1):
@@ -90,11 +167,6 @@ class ASPP(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
-
-# hub_model = torch.hub.load(
-#     'moskomule/senet.pytorch',
-#     'se_resnet50',
-#     pretrained=True,)
 
 class UneXt50(nn.Module):
     def __init__(self, stride=1, num_classes=11, **kwargs):
