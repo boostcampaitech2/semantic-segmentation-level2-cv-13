@@ -265,13 +265,14 @@ class DeformableDeepLabV3(nn.Module):
     model_name = 'DeformableDeepLabV3'
     def __init__(self,
                  num_classes = 11,
-                 target_size = 256):
+                 target_size = 256,
+                 use_v2 = False):
         super(DeformableDeepLabV3, self).__init__()
         self.deeplab = models.segmentation.deeplabv3_resnet101(pretrained=True)
-        self._deformable_conv(self.deeplab)
+        self._deformable_conv(self.deeplab, use_v2)
         self.deeplab.classifier[4] = nn.Conv2d(target_size, num_classes, kernel_size=1)
         
-    def _deformable_conv(self, model, use_v2 = False):
+    def _deformable_conv(self, model, use_v2):
 
         layers = [name for name, _ in model.backbone.named_children() if 'layer' in name]
         if not use_v2:
@@ -287,7 +288,3 @@ class DeformableDeepLabV3(nn.Module):
     def forward(self, x):
         return self.deeplab(x)
 
-
-if __name__ == "__main__":
-    model = DeformableDeepLabV3()
-    print(model.deeplab.backbone)
