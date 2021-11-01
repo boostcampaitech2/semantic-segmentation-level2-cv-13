@@ -1,6 +1,11 @@
+# from albumentations.augmentations import transforms
+from cv2 import transpose
 import pandas as pd
 import numpy as np
+from pandas.core.algorithms import mode
 import torch
+from torchvision import transforms
+from torch.utils import data
 from torch.utils.data import DataLoader
 from utils import fix_seed, arg_parse
 
@@ -10,9 +15,6 @@ import os
 import json
 from collections import namedtuple
 
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
-
 # tta
 import ttach as tta
 
@@ -21,31 +23,24 @@ def collate_fn(batch):
 
 def test(model, test_loader, device):
     size = 256
-    transform = A.Compose([A.Resize(size, size)])
+    tf = transforms.Compose([transforms.Resize(size, interpolation=transforms.InterpolationMode.NEAREST)])
     print('Start prediction.')
-    
+
     model.eval()
     
     file_name_list = []
-    preds_array = np.empty((0, size*size), dtype=np.compat.long)
+    preds_array = np.empty((0, size*size), dtype=np.int32)
     
     with torch.no_grad():
         for imgs, image_infos in tqdm(test_loader):
             # inference (512 x 512)
-            outs = model(torch.stack(imgs).to(device))['out']
-            oms = torch.argmax(outs.squeeze(), dim=1).detach().cpu().numpy()
+            imgs = torch.stack(imgs).to(device)
+            outs = model(imgs)['out']
+            oms = torch.argmax(outs.squeeze(), dim=1)
             
             # resize (256 x 256)
-            temp_mask = []
-            for img, mask in zip(np.stack(imgs), oms):
-                transformed = transform(image=img, mask=mask)
-                mask = transformed['mask']
-                temp_mask.append(mask)
-                
-            oms = np.array(temp_mask)
-            
-            oms = oms.reshape([oms.shape[0], size*size]).astype(int)
-            preds_array = np.vstack((preds_array, oms))
+            oms = tf(oms).reshape(oms.shape[0], size*size).int()
+            preds_array = np.vstack((preds_array, oms.cpu().numpy()))
             
             file_name_list.append([i['file_name'] for i in image_infos])
     print("End prediction.")
@@ -69,17 +64,17 @@ if __name__ == "__main__":
 
     # model arch
     model_module = getattr(import_module("model"), cfgs.model.name)
-    model = model_module(**cfgs.model.args._asdict())
+    model = model_module(**cfgs.model.args._asdict()).to(device)
 
     # load model weights
     checkpoint = torch.load(cfgs.weight_path, map_location=device)
     state_dict = checkpoint['net']
 
     model.load_state_dict(state_dict)
-    model = model.to(device)
-    if cfgs.tta:
-        tta_transform = getattr(import_module("ttach.aliases"), cfgs.tta.name)
-        model = tta.SegmentationTTAWrapper(model, tta_transform(**cfgs.tta.args._asdict()), output_mask_key = 'out')
+    # model = model.to(device)
+    # if cfgs.tta:
+    #     tta_transform = getattr(import_module("ttach.aliases"), cfgs.tta.name)
+    #     model = tta.SegmentationTTAWrapper(model, tta_transform(**cfgs.tta.args._asdict()), output_mask_key = 'out')
 
     test_augmentation_module = getattr(import_module("augmentation"), cfgs.augmentation)
     test_augmentation = test_augmentation_module().transform
@@ -92,7 +87,8 @@ if __name__ == "__main__":
                              collate_fn=collate_fn)
 
     # sample_submisson.csv 열기
-    submission = pd.read_csv(cfgs.sample_submission_path, index_col=None)
+    # submission = pd.read_csv(cfgs.sample_submission_path, index_col=None)
+    submission = pd.DataFrame(data={'image_id': [], 'PredictionString': []})
 
     # test set에 대한 prediction
     file_names, preds = test(model, test_loader, device)
