@@ -128,7 +128,7 @@ class CopyPasteV2(A.DualTransform):
         
         img_idx = self.ann['image_id']
         new_img = cv2.imread(self.data_root + "/" + self.coco.loadImgs(img_idx)[0]['file_name'])
-        new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2RGB).astype(np.float32)
+        new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2RGB)
         seg = np.zeros((new_img.shape[0], new_img.shape[1]))
         
         category_id = self.ann['category_id']
@@ -140,8 +140,8 @@ class CopyPasteV2(A.DualTransform):
         w = math.ceil(self.ann['bbox'][2])
         h = math.ceil(self.ann['bbox'][3])
 
-        new_w = None
-        new_h = None
+        new_w = w
+        new_h = h
 
         # target 이미지 ann bbox 크기 random하게 재조정
         if w * h > self.max_resize * self.max_resize:
