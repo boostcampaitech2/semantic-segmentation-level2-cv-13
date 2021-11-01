@@ -1,11 +1,6 @@
-# from albumentations.augmentations import transforms
-from cv2 import transpose
 import pandas as pd
-import numpy as np
-from pandas.core.algorithms import mode
 import torch
 from torchvision import transforms
-from torch.utils import data
 from torch.utils.data import DataLoader
 from utils import fix_seed, arg_parse
 
@@ -23,13 +18,13 @@ def collate_fn(batch):
 
 def test(model, test_loader, device):
     size = 256
-    tf = transforms.Compose([transforms.Resize(size, interpolation=transforms.InterpolationMode.NEAREST)])
+    tf = transforms.Compose([transforms.Resize(size)])
     print('Start prediction.')
 
     model.eval()
     
     file_name_list = []
-    preds_array = np.empty((0, size*size), dtype=np.int32)
+    preds_array = torch.empty((0, size*size), dtype=torch.int, device=device)
     
     with torch.no_grad():
         for imgs, image_infos in tqdm(test_loader):
@@ -40,11 +35,12 @@ def test(model, test_loader, device):
             
             # resize (256 x 256)
             oms = tf(oms).reshape(oms.shape[0], size*size).int()
-            preds_array = np.vstack((preds_array, oms.cpu().numpy()))
-            
+            preds_array = torch.vstack((preds_array, oms))
+
             file_name_list.append([i['file_name'] for i in image_infos])
     print("End prediction.")
     file_names = [y for x in file_name_list for y in x]
+    preds_array = preds_array.cpu().numpy()
     
     return file_names, preds_array
 
@@ -71,10 +67,10 @@ if __name__ == "__main__":
     state_dict = checkpoint['net']
 
     model.load_state_dict(state_dict)
-    # model = model.to(device)
-    # if cfgs.tta:
-    #     tta_transform = getattr(import_module("ttach.aliases"), cfgs.tta.name)
-    #     model = tta.SegmentationTTAWrapper(model, tta_transform(**cfgs.tta.args._asdict()), output_mask_key = 'out')
+    
+    if cfgs.tta:
+        tta_transform = getattr(import_module("ttach.aliases"), cfgs.tta.name)
+        model = tta.SegmentationTTAWrapper(model, tta_transform(**cfgs.tta.args._asdict()), output_mask_key = 'out')
 
     test_augmentation_module = getattr(import_module("augmentation"), cfgs.augmentation)
     test_augmentation = test_augmentation_module().transform
@@ -86,10 +82,7 @@ if __name__ == "__main__":
                              **cfgs.dataloader.args._asdict(),
                              collate_fn=collate_fn)
 
-    # sample_submisson.csv 열기
-    # submission = pd.read_csv(cfgs.sample_submission_path, index_col=None)
     submission = pd.DataFrame(data={'image_id': [], 'PredictionString': []})
-
     # test set에 대한 prediction
     file_names, preds = test(model, test_loader, device)
 

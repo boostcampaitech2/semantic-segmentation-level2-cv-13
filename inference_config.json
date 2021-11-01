@@ -1,18 +1,27 @@
 {
     "seed": 0,
     "data_root": "../input/data",
-    "json_path" : "../input/data/test.json",
-    "sample_submission_path": "../baseline_code/submission/sample_submission.csv",
+    "json_path": "../input/data/test.json",
     "dataset": "TestDataset",
-    "dataloader": {"args": {"batch_size": 8,
-                   "num_workers": 4,
-                   "shuffle": false}},
-    "augmentation": "BaseAugmentation",
-    "model": {"name":"DeepLabV3_resnet101",
-              "args": {"num_classes": 11,
-                       "target_size": 256}},
-    "weight_path": "./results/fcn_resnet50_best_model(pretrained).pt",
+    "dataloader": {
+        "args": {
+            "batch_size": 64,
+            "num_workers": 4,
+            "shuffle": false
+        }
+    },
+    "augmentation": "JDJ_val_Augmentation",
+    "model": {
+        "name": "Custom_Unet",
+        "args": {
+            "stride": 1,
+            "num_classes": 11
+        }
+    },
+    "weight_path": "",
     "output_path": "./submission",
-    "tta" : {"name" : "d4_transform", 
-             "args" : {}}
+    "tta": {
+        "name": "d4_transform",
+        "args": {}
+    }
 }
