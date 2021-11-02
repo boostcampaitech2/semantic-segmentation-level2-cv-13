@@ -31,6 +31,10 @@ class CopyPaste(A.DualTransform):
         print(len(self.indexes))
         self.random_number = None
 
+        self.rotate_transform = A.Compose([
+            A.Rotate(limit = (-30, 30))
+        ])
+
     def apply(self, img, **params):
         self.choice_index()
         if self.seg is not None:
@@ -45,16 +49,55 @@ class CopyPaste(A.DualTransform):
     def choice_index(self):
         self.random_number = random.random()
         if self.random_number < self.p_:
-            self.idx = random.choice(self.indexes)
-            self.ann = {'id' : 0, 'image_id' : 0, 'category_id' : self.train_df.iloc[self.idx]['category_id'],
-                        'segmentation' : self.train_df.iloc[self.idx]['segmentation']}
-            self.fn = self.train_df.iloc[self.idx]['file_name']
-            self.new_img = cv2.imread(self.data_root + "/" + self.fn)
-            self.seg = self.coco.annToMask(self.ann)
+            idx = random.choice(self.indexes)
+            ann = {'id' : 0, 'image_id' : 0, 'category_id' : self.train_df.iloc[idx]['category_id'],
+                        'segmentation' : self.train_df.iloc[idx]['segmentation'],
+                        'bbox' : self.train_df.iloc[idx]['bbox']}
+            fn = self.train_df.iloc[idx]['file_name']
+            new_img = cv2.imread(self.data_root + "/" + fn)
+            seg = self.coco.annToMask(ann)
+
+            zero_img = np.zeros((new_img.shape[0], new_img.shape[1], new_img.shape[2]))
+            zero_mask = np.zeros((seg.shape[0], seg.shape[1]))
+            
+            x, y, w, h = int(ann['bbox'][0]), int(ann['bbox'][1]), int(ann['bbox'][2]), int(ann['bbox'][3])
+            if 512 / w < 1.31:
+                ratio_w = random.random() * 0.3 - 0.3
+            else:
+                ratio_w = random.random() * 0.6 - 0.3
+            if 512 / h < 1.31:
+                ratio_h = random.random() * 0.3 - 0.3
+            else:
+                ratio_h = random.random() * 0.6 -  0.3
+            new_w, new_h = int(w * (1 + ratio_w)), int(h * (1 + ratio_h))
+            
+            img_patch = copy.deepcopy(new_img[y:y+h, x:x+w])
+            mask_patch = copy.deepcopy(seg[y:y+h, x:x+w])
+
+            resize_transform = A.Compose([
+                A.Resize(new_w, new_h)
+            ])
+
+            transformed = resize_transform(image= img_patch, mask=mask_patch)
+            transformed_img = transformed['image']
+            transformed_mask = transformed['mask']
+
+            px, py = random.randint(0, new_img.shape[0] - new_w), random.randint(0, new_img.shape[1] - new_h)
+
+            zero_img[px:px+new_w, py:py+new_h] = transformed_img
+            zero_mask[px:px+new_w, py:py+new_h] = transformed_mask
+            
+            transformed = self.rotate_transform(image = zero_img, mask = zero_mask)
+            transformed_img = transformed['image']
+            transformed_mask = transformed['mask']
+
+            self.new_img = transformed_img
+            self.seg = transformed_mask
+
         else:
             self.new_img = None
             self.seg = None
-            self.ann = None
+            
 
     def get_transform_init_args_names(self):
         return ()
