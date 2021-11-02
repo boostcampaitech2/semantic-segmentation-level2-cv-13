@@ -2,6 +2,10 @@ import torch
 import random
 import numpy as np
 import argparse
+import os
+import glob
+from pathlib import Path
+import re
 
 
 def arg_parse():
@@ -63,3 +67,22 @@ def _fast_hist(label_true, label_pred, n_class):
         n_class * label_true[mask].int() + label_pred[mask],
         minlength=n_class ** 2).reshape(n_class, n_class)
     return hist
+
+
+def remove_old_files(target_dir, thres = 3):
+    """
+    remove old pt files from a target directory
+
+    - Args
+        target_dir: a directory to remove files from
+        thres: number of files to be remained
+    """
+    files = sorted(os.listdir(target_dir), key=lambda x: os.path.getctime(os.path.join(target_dir, x)))
+    files = [os.path.join(target_dir, f) for f in files if f.endswith(".pt")]
+
+    if len(files) <= 1:
+        print("No Files to Remove")
+        return 
+
+    for i in range(0, len(files)-thres):
+        os.remove(files[i])
