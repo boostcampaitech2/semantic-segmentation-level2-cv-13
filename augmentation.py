@@ -92,9 +92,9 @@ class JDJ_Augmentation:
 
 
 class JYAugmentation:
-    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root="../input/data", json_dir="./splited_json/train_split_0.json"):
+    def __init__(self, binary_class = "Metal", p_ = 0.8, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root="../input/data", json_dir="./splited_json/train_split_0.json"):
         self.transform = A.Compose([
-            CopyPaste(data_root = data_root, json_dir = json_dir, p = 1),
+            CopyPaste(binary_class = binary_class, p_ = p_, data_root = data_root, json_dir = json_dir, p = 1),
             A.RandomResizedCrop(height = 512, width = 512, scale = (0.6, 1)),
             A.HorizontalFlip(p = 0.5),
             A.VerticalFlip(p = 0.2),

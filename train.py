@@ -24,10 +24,7 @@ import seaborn as sns; sns.set(rc={'figure.figsize':(12,12)})
 # logging date
 from datetime import datetime
 
-category_names = ['Backgroud','General trash','Paper',
-                    'Paper pack', 'Metal', 'Glass',
-                    'Plastic', 'Styrofoam', 'Plastic bag',
-                    'Battery', 'Clothing']
+category_names = ['Backgroud', "Metal"]
 category_dicts = {k:v for k,v in enumerate(category_names)}
 
 cur_date = datetime.today().strftime("%y%m%d")
@@ -86,7 +83,7 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
     model.eval()
 
     example_images = []
-    n_class = 11
+    n_class = 2
     total_loss = 0
 
     pbar = tqdm(enumerate(data_loader), total=len(data_loader))
@@ -164,7 +161,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
 
     print(f'Start training..')
     start_epoch = 0
-    n_class = 11
+    n_class = 2
     best_loss = 9999999
     best_miou = 0
     num_to_remain = 3 # remain 3 files

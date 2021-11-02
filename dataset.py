@@ -12,7 +12,7 @@ class TrainDataset(Dataset):
     category_names = ['Backgroud','General trash','Paper','Paper pack','Metal','Glass',
                       'Plastic','Styrofoam','Plastic bag','Battery','Clothing']
 
-    def __init__(self, data_root, json_dir, mode = "train", cutmix_prob = 0.25, mixup_prob = 0.25, transform = None):
+    def __init__(self, data_root, json_dir, binary_class = "Metal", mode = "train", cutmix_prob = 0.25, mixup_prob = 0.25, transform = None):
 
         """ Trash Object Detection Train Dataset
         Args:
@@ -33,6 +33,7 @@ class TrainDataset(Dataset):
         self.transform = transform
         self.num_classes = len(self.category_names)
         self.num_images = len(self.coco.imgs)
+        self.binary_class = binary_class
         
         self.img_idx = []
         for coco_img in self.coco.imgs:
@@ -91,8 +92,8 @@ class TrainDataset(Dataset):
         anns = sorted(anns, key=lambda idx : len(idx['segmentation'][0]), reverse=True)
         for i in range(len(anns)):
             className = self.get_classname(anns[i]['category_id'], cats)
-            pixel_value = self.category_names.index(className)
-            mask[self.coco.annToMask(anns[i]) == 1] = pixel_value
+            if className == self.binary_class:
+                mask[self.coco.annToMask(anns[i]) == 1] = 1
         mask = mask.astype(np.int8)
 
         return image, mask
