@@ -50,5 +50,6 @@
     "wandb_prj_name": "",
     "wandb_run_name": "",
     "save_mode": "miou",
+    "num_to_remain": 3,
     "fp16": false
 }

@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from torch.cuda.amp import autocast, GradScaler
 
 # randomness control
-import numpy as np; np.set_printoptions(threshold=np.inf, linewidth=np.inf)
+import numpy as np
 from tqdm import tqdm
 
 import wandb
@@ -165,14 +165,13 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
 
 def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, 
           saved_dir, val_every, save_mode, resume_from, checkpoint_path, 
-          device, scheduler = None, fp16 = False):
+          num_to_remain, device, scheduler = None, fp16 = False):
 
     print(f'Start training..')
     start_epoch = 0
     n_class = 11
     best_loss = 9999999
     best_miou = 0
-    num_to_remain = 3 # remain 3 files
 
     if resume_from:
         model, optimizer, scheduler, start_epoch, best_loss, best_miou = load_checkpoint(checkpoint_path, model, optimizer, scheduler)
@@ -368,6 +367,7 @@ def main():
         'save_mode': cfgs.save_mode, 
         'resume_from': cfgs.resume_from, 
         'checkpoint_path': cfgs.checkpoint_path, # absolute path
+        'num_to_remain': cfgs.num_to_remain,
         'device': device,
         'scheduler': scheduler,
         'fp16': cfgs.fp16
