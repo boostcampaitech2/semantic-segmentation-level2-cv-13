@@ -1,0 +1,48 @@
+{
+    "seed": 0,
+    "resize_type": "albumentations",
+    "num_process": 4,
+    "data_root": "../input/data",
+    "json_path": "../input/data/test.json",
+    "dataset": "TestDataset",
+    "dataloader": {
+        "args": {
+            "batch_size": 32,
+            "num_workers": 4,
+            "shuffle": false
+        }
+    },
+    "model_infos": [
+        {
+            "name": "Custom_Unet",
+            "args": {
+                "stride": 1,
+                "num_classes": 11
+            },
+            "weight_path": "./results/Custom_Unet_SGD+CA_aug+cnpv2_fold3/Custom_Unet_0.718_211031.pt",
+            "augmentation": "BaseAugmentation",
+            "tta": {
+                "name": "d4_transform",
+                "args": {}
+            }
+        },
+        {
+            "name": "Custom_Unet",
+            "args": {
+                "stride": 1,
+                "num_classes": 11
+            },
+            "weight_path": "./results/Custom_Unet_SGD+CA_aug+cnpv2_fold3/Custom_Unet_0.703_211031.pt",
+            "augmentation": "BaseAugmentation",
+            "tta": {
+                "name": "d4_transform",
+                "args": {}
+            }
+        }
+    ],
+    "weight": [
+        0.5,
+        0.5
+    ],
+    "output_path": "./ensemble_submission"
+}
