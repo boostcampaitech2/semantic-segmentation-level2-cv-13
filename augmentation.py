@@ -1,18 +1,29 @@
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-from copy_paste import CopyPaste
+from copy_paste import *
+
 
 class BaseAugmentation:
     def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
         self.transform = A.Compose([
             A.Normalize(mean=mean, std=std),
             ToTensorV2()
-            ])
+        ])
+
 
 class BaseCopyPasteAugmentation:
-    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root = "../input/data", json_dir = "./splited_json/train_split_0.json"):
+    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root="../input/data", json_dir="./splited_json/train_split_0.json"):
         self.transform = A.Compose([
-            CopyPaste(data_root = data_root, json_dir = json_dir, p = 1),
+            CopyPaste(data_root=data_root, json_dir=json_dir, p=1),
+            A.Normalize(mean=mean, std=std),
+            ToTensorV2()
+        ])
+
+
+class BaseCopyPasteV2Augmentation:
+    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root="../input/data", json_dir="/opt/ml/segmentation/input/data/category_split_json/metal_150*150.json"):
+        self.transform = A.Compose([
+            CopyPasteV2(data_root = data_root, json_dir=json_dir, p=0.5, min_resize=100, max_resize=200, min_rotate=-30, max_rotate=30),
             A.Normalize(mean=mean, std=std),
             ToTensorV2()
         ])
@@ -104,3 +115,4 @@ class JYAugmentation:
             A.Normalize(mean = mean, std = std),
             ToTensorV2()
         ])
+
