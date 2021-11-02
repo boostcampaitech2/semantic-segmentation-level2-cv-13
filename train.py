@@ -7,14 +7,14 @@ import re
 from importlib import import_module
 from pathlib import Path
 
-from utils import label_accuracy_score, add_hist, fix_seed, arg_parse
+from utils import label_accuracy_score, add_hist, fix_seed, arg_parse, remove_old_files
 from dataset import *
 import torch
 from torch.utils.data import DataLoader
 from torch.cuda.amp import autocast, GradScaler
 
 # randomness control
-import numpy as np
+import numpy as np; np.set_printoptions(threshold=np.inf, linewidth=np.inf)
 from tqdm import tqdm
 
 import wandb
@@ -23,7 +23,6 @@ import seaborn as sns; sns.set(rc={'figure.figsize':(12,12)})
 
 # logging date
 from datetime import datetime
-
 
 category_names = ['Backgroud','General trash','Paper',
                     'Paper pack', 'Metal', 'Glass',
@@ -173,6 +172,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
     n_class = 11
     best_loss = 9999999
     best_miou = 0
+    num_to_remain = 3 # remain 3 files
 
     if resume_from:
         model, optimizer, scheduler, start_epoch, best_loss, best_miou = load_checkpoint(checkpoint_path, model, optimizer, scheduler)
@@ -190,8 +190,8 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
         pbar = tqdm(enumerate(train_loader), total = len(train_loader))
         for step, (images, masks) in pbar:
             images = torch.stack(images).to(device)
-            masks = torch.stack(masks).long().to(device) 
-  
+            masks = torch.stack(masks).long().to(device)
+
             optimizer.zero_grad()
             if fp16:
                 with autocast():
@@ -255,6 +255,10 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
                     best_miou = miou
                     best_loss = avrg_loss # best miou일 때도 loss tracking 수행 후 checkpoint에 저장
                     save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, scheduler, file_name=f"{model.model_name}_{round(best_miou, 3)}_{cur_date}.pt")
+
+            if len(os.listdir(saved_dir)) > num_to_remain:
+                remove_old_files(saved_dir, thres=num_to_remain)
+
             
             # lr 조정
             if scheduler:
@@ -320,7 +324,7 @@ def main():
     else:
         criterion_module = getattr(import_module("torch.nn"), cfgs.criterion.name)
     
-    criterion = criterion_module()
+    criterion = criterion_module(**cfgs.criterion.args._asdict())
 
     # optimizer
     if hasattr(import_module("optimizers"), cfgs.optimizer.name):
