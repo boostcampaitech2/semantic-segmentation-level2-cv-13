@@ -127,3 +127,31 @@ class JYAugmentation:
             ToTensorV2()
         ])
 
+
+class CHJ_Augmentation:
+    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root="../input/data", json_dir="./splited_json/train_split_0.json"):
+        self.transform = A.Compose([
+            CopyPaste(data_root=data_root, json_dir=json_dir, p=1),
+            A.RandomCrop(width=384, height=384),
+            A.OneOf([
+                A.Transpose(p=1.0),  # 아예 90도 회전(?)
+                A.HorizontalFlip(p=1.0),  # Horizontal로 Flip (위 아래)
+                A.VerticalFlip(p=1.0),  # Vertical로 Flip (양 옆)
+                A.Flip(p=1.0),  # Flip 류 중 random으로 적용
+                A.ShiftScaleRotate(p=1.0),  # 각도로 돌리는 것
+            ], p=0.5),
+            A.OneOf([  # Trnasform 류
+                A.ElasticTransform(p=1.0),
+                A.GridDistortion(p=1.0),
+                A.CoarseDropout(p=1.0),
+            ], p=0.5),
+            A.OneOf([ 
+                A.Blur(p=1.0),
+                A.MotionBlur(p=1.0),
+                A.GaussianBlur(p=1.0),
+            ], p=0.25),
+            A.Sharpen(),
+            A.Normalize(mean=mean, std=std),
+            A.Resize(512,512),
+            ToTensorV2()
+        ])
