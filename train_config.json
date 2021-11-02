@@ -32,7 +32,11 @@
                         "target_size" :512}},
     "resume_from": false,
     "checkpoint_path": "",
-    "criterion": {"name" : "custom_CrossEntropyLoss"},
+    "criterion": {"name" : "DiceCELoss",
+                  "args": {
+                      "dice_weight": 0.2,
+                      "focal_weight": 0.8 
+                  }},
     "optimizer": {"name" : "Adam",
                   "args" : {"lr" : 0.00001,
                             "weight_decay" : 1e-6}},
