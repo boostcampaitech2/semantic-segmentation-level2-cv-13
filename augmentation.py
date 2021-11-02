@@ -1,5 +1,6 @@
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from albumentations.pytorch.transforms import ToTensor
 from copy_paste import *
 
 
@@ -14,7 +15,7 @@ class BaseAugmentation:
 class BaseCopyPasteAugmentation:
     def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root="../input/data", json_dir="./splited_json/train_split_0.json"):
         self.transform = A.Compose([
-            CopyPaste(data_root=data_root, json_dir=json_dir, p=1),
+            CopyPaste(data_root=data_root, json_dir=json_dir, p=0.6),
             A.Normalize(mean=mean, std=std),
             ToTensorV2()
         ])
@@ -32,6 +33,16 @@ class BaseCopyPasteV2Augmentation:
 class NoAugmentation:
     def __init__(self):
         self.transform = A.Compose([
+            ToTensorV2()
+        ])
+
+class YJ_Augmentation:
+    def __init__(self,mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+        self.transform = A.Compose([
+            A.Rotate(p=0.5),
+            A.RandomBrightnessContrast(p=0.5),
+            A.CoarseDropout(p=0.5),
+            A.Normalize(mean=mean, std=std),
             ToTensorV2()
         ])
 

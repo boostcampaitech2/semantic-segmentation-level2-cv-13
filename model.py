@@ -1,4 +1,4 @@
-from hrnet.seg_hrnet_ocr import get_seg_model
+#from hrnet.seg_hrnet_ocr import get_seg_model
 import segmentation_models_pytorch as smp
 import torch
 import torch.nn as nn
@@ -268,9 +268,6 @@ class DeformableConv2d(nn.Module):
 
             nn.init.constant_(self.modulator_conv.weight, 0.)
             nn.init.constant_(self.modulator_conv.bias, 0.)
-        
-        else:
-            self.modulator_conv = None
 
         self.regular_conv = nn.Conv2d(in_channels=in_channels,
                                       out_channels = out_channels,
@@ -285,6 +282,9 @@ class DeformableConv2d(nn.Module):
         
         if self.use_v2:
             modulator = 2. * torch.sigmoid(self.modulator_conv(x))
+        
+        else:
+            modulator = None
 
         x = torchvision.ops.deform_conv2d(input=x,
                                           offset=offset,
@@ -305,9 +305,10 @@ class DeformableDeepLabV3(nn.Module):
     def __init__(self,
                  num_classes = 11,
                  target_size = 256,
-                 use_v2 = False):
+                 use_v2 = False,
+                 use_aux_loss = False):
         super(DeformableDeepLabV3, self).__init__()
-        self.deeplab = models.segmentation.deeplabv3_resnet101(pretrained=True)
+        self.deeplab = models.segmentation.deeplabv3_resnet101(pretrained=True, aux_loss = use_aux_loss)
         self._deformable_conv(self.deeplab, use_v2)
         self.deeplab.classifier[4] = nn.Conv2d(target_size, num_classes, kernel_size=1)
         
@@ -328,3 +329,40 @@ class DeformableDeepLabV3(nn.Module):
         return self.deeplab(x)
 
 
+class ResNestDeepLabV3(nn.Module):
+    model_name = "ResNestDeepLabV3"
+
+    def __init__(self, encoder_name, encoder_weight='imagenet', in_channels = 3, num_classes = 11):
+        super(ResNestDeepLabV3, self).__init__()
+        self.encoder_name = encoder_name
+        self.encoder_weight = encoder_weight
+        self.in_channels = in_channels
+        self.num_classes = num_classes
+        self.model = smp.DeepLabV3(
+                                    encoder_name=self.encoder_name,
+                                    encoder_weights = self.encoder_weight,
+                                    in_channels = self.in_channels,
+                                    classes = self.num_classes
+                                    )
+        
+    def forward(self, x):
+        return {'out': self.model(x)}
+
+class FPN(nn.Module):
+    model_name = "FPN"
+
+    def __init__(self, encoder_name, encoder_weight="imagenet", in_channels = 3, num_classes = 11):
+        super(FPN, self).__init__()
+        self.encoder_name = encoder_name
+        self.encoder_weight = encoder_weight
+        self.in_channels = in_channels
+        self.num_classes = num_classes
+        self.model = smp.FPN(
+            encoder_name = self.encoder_name,
+            encoder_weights = self.encoder_weight,
+            classes = self.num_classes,
+            in_channels = self.in_channels
+        )
+
+    def forward(self, x):
+        return {'out': self.model(x)}
