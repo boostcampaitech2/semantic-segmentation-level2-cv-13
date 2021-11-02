@@ -1,5 +1,7 @@
 {
     "seed": 0,
+    "resize_type": "albumentations",
+    "num_process" : 4,
     "data_root": "../input/data",
     "json_path": "../input/data/test.json",
     "dataset": "TestDataset",
@@ -10,7 +12,7 @@
             "shuffle": false
         }
     },
-    "augmentation": "JDJ_val_Augmentation",
+    "augmentation": "BaseAugmentation",
     "model": {
         "name": "Custom_Unet",
         "args": {
