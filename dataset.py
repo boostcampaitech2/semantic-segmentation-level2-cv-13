@@ -94,6 +94,8 @@ class TrainDataset(Dataset):
             className = self.get_classname(anns[i]['category_id'], cats)
             if className == self.binary_class:
                 mask[self.coco.annToMask(anns[i]) == 1] = 1
+            else:
+                mask[self.coco.annToMask(anns[i]) == 1] = 0
         mask = mask.astype(np.int8)
 
         return image, mask
