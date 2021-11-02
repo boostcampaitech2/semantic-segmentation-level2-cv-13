@@ -651,8 +651,8 @@ class HighResolutionNet(nn.Module):
         out = self.cls_head(feats)
 
         
-        out_aux_seg.append(out_aux)
         out_aux_seg.append(out)
+        out_aux_seg.append(out_aux)
 
         return out_aux_seg
 
