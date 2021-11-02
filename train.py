@@ -155,12 +155,7 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
         "Validation mIoU": round(mIoU, 4)
     })
     
-    if epoch != num_epochs:
-        return avrg_loss, mIoU
-    else:
-        hist = hist.cpu().numpy()
-        return avrg_loss, mIoU, IoU_by_class, hist
-    
+    return avrg_loss, mIoU, IoU_by_class, hist    
     
 
 def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, 
@@ -189,8 +184,8 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
         pbar = tqdm(enumerate(train_loader), total = len(train_loader))
         for step, (images, masks) in pbar:
             images = torch.stack(images).to(device)
-            masks = torch.stack(masks).long().to(device)
-
+            masks = torch.stack(masks).long().to(device) 
+            
             optimizer.zero_grad()
             if fp16:
                 with autocast():
@@ -234,16 +229,15 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
              
         # validation 주기에 따른 loss 출력 및 best model 저장
         if (epoch + 1) % val_every == 0:
-            if epoch+1 < num_epochs:
-                avrg_loss, miou = validation(epoch+1, num_epochs, model, val_loader, criterion, device)
-            else:
-                avrg_loss, miou, class_iou, hist = validation(epoch+1, num_epochs, model, val_loader, criterion, device)
+            avrg_loss, miou, class_iou, hist = validation(epoch+1, num_epochs, model, val_loader, criterion, device)
             
             # save_mode에 따라 모델 저장
             if save_mode == "loss": # loss에 따라 모델 저장
                 if avrg_loss < best_loss:
                     print(f"Best performance at epoch: {epoch + 1}")
                     print(f"Save model in {saved_dir}")
+                    best_hist = hist.detach().cpu().numpy()
+                    best_class_iou = class_iou
                     best_loss = avrg_loss
                     save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, scheduler, file_name=f"{model.model_name}_{round(best_loss,3)}_{cur_date}.pt")
                     
@@ -251,6 +245,8 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
                 if miou > best_miou:
                     print(f"Best performance at epoch: {epoch + 1}")
                     print(f"Save model in {saved_dir}")
+                    best_hist = hist.detach().cpu().numpy()
+                    best_class_iou = class_iou
                     best_miou = miou
                     best_loss = avrg_loss # best miou일 때도 loss tracking 수행 후 checkpoint에 저장
                     save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, scheduler, file_name=f"{model.model_name}_{round(best_miou, 3)}_{cur_date}.pt")
@@ -266,10 +262,10 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
                 else:
                     scheduler.step()
 
-    #heatmap    
+    #heatmap
     ax = plt.subplots(figsize=(12,12))
     heatmap_labels = [category_dicts[key] + "("+str(key)+")" for key in category_dicts]
-    ax = sns.heatmap(hist/np.sum(hist, axis=1).reshape(-1,1), xticklabels = heatmap_labels, yticklabels = heatmap_labels,  
+    ax = sns.heatmap(best_hist/np.sum(best_hist, axis=1).reshape(-1,1), xticklabels = heatmap_labels, yticklabels = heatmap_labels,  
                      annot = True, cmap = 'Blues', fmt = ".4f") # gt 중에서 해당 prediction이 차지하는 비율이 얼마나 되는지
     ax.tick_params(axis='x', rotation=30)
     ax.set_title("Confusion Matrix for the latest results")
@@ -279,7 +275,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
     wandb.log(
         {
             "Confusion Matrix": wandb.Image(ax),
-            "IoU by Class": wandb.plot.bar(wandb.Table(data=class_iou, columns=["label","value"]), "label","value", title="IoU by class")
+            "IoU by Class": wandb.plot.bar(wandb.Table(data=best_class_iou, columns=["label","value"]), "label","value", title="IoU by class")
         }
     )
 
