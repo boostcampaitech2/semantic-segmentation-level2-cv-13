@@ -24,7 +24,7 @@ import seaborn as sns; sns.set(rc={'figure.figsize':(12,12)})
 # logging date
 from datetime import datetime
 
-category_names = ['Backgroud', "Metal"]
+category_names = ["Background", "Paper pack"]
 category_dicts = {k:v for k,v in enumerate(category_names)}
 
 cur_date = datetime.today().strftime("%y%m%d")
@@ -149,7 +149,8 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
         "Predicted Images with GT": example_images,
         "Validation Accuracy": round(acc,4),
         "Average Validation Loss": round(avrg_loss, 4),
-        "Validation mIoU": round(mIoU, 4)
+        "Validation mIoU": round(mIoU, 4),
+        "Validation target class IoU": round(IoU_by_class[1][1], 4)
     })
     
     return avrg_loss, mIoU, IoU_by_class, hist    
@@ -163,7 +164,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
     start_epoch = 0
     n_class = 2
     best_loss = 9999999
-    best_miou = 0
+    best_miou, best_class_iou = 0, 0
     num_to_remain = 3 # remain 3 files
 
     if resume_from:
@@ -240,14 +241,14 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
                     save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, scheduler, file_name=f"{model.model_name}_{round(best_loss,3)}_{cur_date}.pt")
                     
             else: # miou 기준 모델 저장
-                if miou > best_miou:
+                if class_iou[1][1] > best_class_iou:
                     print(f"Best performance at epoch: {epoch + 1}")
                     print(f"Save model in {saved_dir}")
                     best_hist = hist.detach().cpu().numpy()
-                    best_class_iou = class_iou
+                    best_class_iou = class_iou[1][1]
                     best_miou = miou
                     best_loss = avrg_loss # best miou일 때도 loss tracking 수행 후 checkpoint에 저장
-                    save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, scheduler, file_name=f"{model.model_name}_{round(best_miou, 3)}_{cur_date}.pt")
+                    save_checkpoint(epoch, model, best_loss, best_miou, optimizer, saved_dir, scheduler, file_name=f"{model.model_name}_{round(best_class_iou, 3)}_{cur_date}.pt")
 
             if len(os.listdir(saved_dir)) > num_to_remain:
                 remove_old_files(saved_dir, thres=num_to_remain)
