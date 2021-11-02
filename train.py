@@ -160,7 +160,7 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
 
 def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, 
           saved_dir, val_every, save_mode, resume_from, checkpoint_path, 
-          device, scheduler = None, fp16 = False):
+          num_to_remain, device, scheduler = None, fp16 = False):
 
     print(f'Start training..')
     start_epoch = 0
@@ -364,6 +364,7 @@ def main():
         'save_mode': cfgs.save_mode, 
         'resume_from': cfgs.resume_from, 
         'checkpoint_path': cfgs.checkpoint_path, # absolute path
+        'num_to_remain': cfgs.num_to_remain,
         'device': device,
         'scheduler': scheduler,
         'fp16': cfgs.fp16

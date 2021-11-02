@@ -32,7 +32,12 @@
                         "target_size" : 512}},
     "resume_from": false,
     "checkpoint_path": "",
-    "criterion": {"name" : "DiceCELoss"},
+
+    "criterion": {"name" : "DiceCELoss",
+                  "args": {
+                      "dice_weight": 0.2,
+                      "focal_weight": 0.8 
+                  }},
     "optimizer": {"name" : "SGD",
                   "args" : {"lr" : 0.001}},
     "scheduler":{"name":"ReduceLROnPlateau",
@@ -43,5 +48,6 @@
     "wandb_prj_name": "jy_seg_dpt",
     "wandb_run_name": "hrnet_ocr",
     "save_mode": "miou",
+    "num_to_remain": 3,
     "fp16": true
 }
