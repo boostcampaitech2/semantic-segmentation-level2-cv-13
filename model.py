@@ -58,7 +58,7 @@ class HRNetOCR(nn.Module):
 
         else:
             x = self.model(x)
-            x = F.interpolate(input = x[1], size = (self.w, self.h), mode = "bilinear", align_corners = True)
+            x = F.interpolate(input = x[0], size = (self.w, self.h), mode = "bilinear", align_corners = True)
         return {'out' : x}
 
 class Unet(nn.Module):
