@@ -95,6 +95,7 @@ if __name__ == "__main__":
 
         model_result_list = []
         with torch.no_grad():
+            model.eval()
             for imgs, image_infos in tqdm(test_loader):
                 # inference (512 x 512)
                 imgs = torch.stack(imgs).to(device)
