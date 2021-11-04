@@ -1,4 +1,6 @@
-#from hrnet.seg_hrnet_ocr import get_seg_model
+from dpt.models import DPTSegmentationModel
+from fpn.model import FPN_Model
+from hrnet.seg_hrnet_ocr import get_seg_model
 import segmentation_models_pytorch as smp
 import torch
 import torch.nn as nn
@@ -8,10 +10,6 @@ import torch.nn.functional as F
 from unet_custom.unet_custom import get_unet_custom
 import yaml
 
-
-
-import segmentation_models_pytorch as smp
-from dpt.models import DPTSegmentationModel
 
 
 class FCN_resnet50(nn.Module):
@@ -366,3 +364,26 @@ class FPN(nn.Module):
 
     def forward(self, x):
         return {'out': self.model(x)}
+
+
+class CustomFPN(nn.Module):
+    model_name = "FPN"
+
+    def __init__(self, encoder_name, decoder_augmented_pyramid_channels, encoder_weight="imagenet", in_channels=3, num_classes=11):
+        super(CustomFPN, self).__init__()
+        self.encoder_name=encoder_name
+        self.encoder_weight=encoder_weight
+        self.in_channels=in_channels
+        self.num_classes=num_classes
+        self.decoder_augmented_pyramid_channels=decoder_augmented_pyramid_channels,
+        self.model=FPN_Model(
+            encoder_name=self.encoder_name,
+            encoder_weight=self.encoder_weight,
+            in_channels=self.in_channels,
+            classes = self.num_classes,
+            decoder_augmented_pyramid_channels = self.decoder_augmented_pyramid_channels
+
+        )
+
+    def forward(self, x):
+        return {'out': x}
