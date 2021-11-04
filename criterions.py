@@ -6,9 +6,9 @@ import segmentation_models_pytorch as smp
 
 class custom_CrossEntropyLoss(nn.Module):
 
-    def __init__(self):
+    def __init__(self, weights):
         nn.Module.__init__(self)
-        self.CEL = nn.CrossEntropyLoss()
+        self.CEL = nn.CrossEntropyLoss(weight=torch.tensor(weights).cuda())
 
 
     def forward(self, pred, target):
