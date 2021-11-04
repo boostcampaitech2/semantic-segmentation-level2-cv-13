@@ -349,17 +349,19 @@ class ResNestDeepLabV3(nn.Module):
 class FPN(nn.Module):
     model_name = "FPN"
 
-    def __init__(self, encoder_name, encoder_weight="imagenet", in_channels = 3, num_classes = 11):
+    def __init__(self, encoder_name, encoder_weight="imagenet", decoder_merge_policy = "cat", in_channels = 3, num_classes = 11):
         super(FPN, self).__init__()
         self.encoder_name = encoder_name
         self.encoder_weight = encoder_weight
         self.in_channels = in_channels
         self.num_classes = num_classes
+        self.decoder_merge_policy = decoder_merge_policy
         self.model = smp.FPN(
             encoder_name = self.encoder_name,
             encoder_weights = self.encoder_weight,
             classes = self.num_classes,
-            in_channels = self.in_channels
+            in_channels = self.in_channels,
+            decoder_merge_policy = self.decoder_merge_policy
         )
 
     def forward(self, x):
@@ -369,21 +371,21 @@ class FPN(nn.Module):
 class CustomFPN(nn.Module):
     model_name = "FPN"
 
-    def __init__(self, encoder_name, decoder_augmented_pyramid_channels, encoder_weight="imagenet", in_channels=3, num_classes=11):
+    def __init__(self, encoder_name, decoder_augmented_pyramid_channels, encoder_weight="imagenet", decoder_merge_policy="cat", in_channels=3, num_classes=11):
         super(CustomFPN, self).__init__()
         self.encoder_name=encoder_name
         self.encoder_weight=encoder_weight
         self.in_channels=in_channels
         self.num_classes=num_classes
-        self.decoder_augmented_pyramid_channels=decoder_augmented_pyramid_channels,
+        self.decoder_augmented_pyramid_channels=decoder_augmented_pyramid_channels
+        self.decoder_merge_policy=decoder_merge_policy
         self.model=FPN_Model(
             encoder_name=self.encoder_name,
-            encoder_weight=self.encoder_weight,
-            in_channels=self.in_channels,
-            classes = self.num_classes,
-            decoder_augmented_pyramid_channels = self.decoder_augmented_pyramid_channels
-
+            encoder_weights=self.encoder_weight,
+            decoder_augmented_pyramid_channels=self.decoder_augmented_pyramid_channels,
+            classes=self.num_classes,
+            in_channels=self.in_channels
         )
 
     def forward(self, x):
-        return {'out': x}
+        return {'out': self.model(x)}
