@@ -13,7 +13,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from functools import partial
 
 class Conv3x3GNReLU(nn.Module):
     def __init__(self, in_channels, out_channels, upsample=False):
@@ -51,29 +51,39 @@ class SegmentationBlock(nn.Module):
 
 
 class FPNBlock(nn.Module):
-    def __init__(self, pyramid_channels, skip_channels, mode="top-down"):
+    def __init__(self, pyramid_channels, skip_channels, mode="top-down", upsample = "interpolate"):
         """
-        FPN Block
+        Custom FPN Block
         - Args
             pyramid_channels: a channel of feature pyramids (i.e. 256)
             skip_channels: a channel of the corresponding feature map with a feature pyramid
             mode: direction of path, "top-down" for standard fpn or "bottom-up" for augmented bottom-up structure (default: top-down)
+            upsample: how to upsample the feature map. must be one of "upconv" or "interpolate" (default: interpolate)
         """
         super().__init__()
-        self.skip_conv = nn.Conv2d(skip_channels, pyramid_channels, kernel_size = 1) # 1x1 conv
-        self.down_conv = nn.Conv2d(pyramid_channels, pyramid_channels, kernel_size = 3, stride = 2, padding = 1) # output size를 맞춰주기 위해 padding
+        self.skip_conv = nn.Conv2d(skip_channels, pyramid_channels, kernel_size=1) # 1x1 conv
+        self.down_conv = nn.Conv2d(pyramid_channels, pyramid_channels, kernel_size=3, stride=2, padding=1) # output size를 맞춰주기 위해 padding
+        self.upsample = upsample
+        if self.upsample == "upconv":
+            self.up_conv = nn.ConvTranspose2d(pyramid_channels, pyramid_channels, kernel_size=3, stride=2, padding=1, output_padding=1) # output_padding을 줘야 2배 upsample이 가능.
         self.mode = mode
     
     def forward(self, x, skip=None):
         if self.mode == "top-down":
-            x = F.interpolate(x, scale_factor=2, mode="nearest")
+            if self.upsample == "interpolate":
+                x = F.interpolate(x, scale_factor=2, mode="nearest")
+            elif self.upsample == "upconv":
+                x = self.up_conv(x) # upsampling with factor 2.
+            else:
+                raise ValueError("upsample must be one of [interpolate, upconv]")
         elif self.mode == "bottom-up":
             x = self.down_conv(x)
         else:
             raise ValueError("Unexpected mode {self.mode}. Mode must be of 'bottom-up' or 'top-down'")
         
         skip = self.skip_conv(skip)
-        x = torch.cat([skip, x])
+        x = x + skip
+        
         return x
 
 
@@ -108,7 +118,8 @@ class FPNDecoder(nn.Module):
         augmented_pyramid_channels=256,
         segmentation_channels=128,
         dropout=0.2,
-        merge_policy="cat"
+        merge_policy="cat",
+        upsample="interpolate"
     ):
         super().__init__()
 
@@ -126,9 +137,9 @@ class FPNDecoder(nn.Module):
         self.p2 = FPNBlock(pyramid_channels, encoder_channels[3])
 
         self.n2 = nn.Conv2d(pyramid_channels, augmented_pyramid_channels, kernel_size=1)
-        self.n3 = FPNBlock(augmented_pyramid_channels, pyramid_channels, mode="bottom-up")
-        self.n4 = FPNBlock(augmented_pyramid_channels, pyramid_channels, mode="bottom-up")
-        self.n5 = FPNBlock(augmented_pyramid_channels, pyramid_channels, mode="bottom-up")
+        self.n3 = FPNBlock(augmented_pyramid_channels, pyramid_channels, mode="bottom-up", upsample=upsample)
+        self.n4 = FPNBlock(augmented_pyramid_channels, pyramid_channels, mode="bottom-up", upsample=upsample)
+        self.n5 = FPNBlock(augmented_pyramid_channels, pyramid_channels, mode="bottom-up", upsample=upsample)
 
         self.seg_blocks = nn.ModuleList([
             SegmentationBlock(augmented_pyramid_channels, segmentation_channels, n_upsamples=n_upsamples)
@@ -158,10 +169,3 @@ class FPNDecoder(nn.Module):
         x = self.dropout(x)
 
         return x
-
-
-
-
-
-
-

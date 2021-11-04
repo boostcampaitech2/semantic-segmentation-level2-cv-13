@@ -26,6 +26,7 @@ class FPN_Model(SegmentationModel):
         decoder_segmentation_channels: int = 128,
         decoder_merge_policy: str = "cat",
         decoder_dropout: float = 0.2,
+        decoder_upsample: str = "interpolate",
         in_channels: int = 3,
         classes: int = 11,
         activation: Optional[str] = None,
@@ -49,6 +50,7 @@ class FPN_Model(SegmentationModel):
             segmentation_channels=decoder_segmentation_channels,
             dropout=decoder_dropout,
             merge_policy=decoder_merge_policy,
+            upsample=decoder_upsample
         )
 
         self.segmentation_head = SegmentationHead(
