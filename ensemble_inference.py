@@ -48,7 +48,6 @@ if __name__ == "__main__":
     output_name = "ensemble_results"
     for model_info in cfgs.model_infos:
         output_name += "_" + model_info.name
-    output_name += ".csv"
 
     # weight = torch.tensor(cfgs.weight, dtype=torch.float32, device=device)
     weight = cfgs.weight
