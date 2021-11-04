@@ -65,13 +65,16 @@ def save_checkpoint(epoch, model, loss, miou, optimizer, saved_dir, scheduler, f
     output_path = os.path.join(saved_dir, file_name)
     torch.save(check_point, output_path)
 
-def load_checkpoint(checkpoint_path, model, optimizer, scheduler):
+def load_checkpoint(checkpoint_path, model, optimizer, scheduler, mode):
     # load model if resume_from is set
     checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint['net'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    if scheduler:
-        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+    
+    if mode == 'all': # checkpoint에서 optimizer와 scheduler 모두 로드하는 경우
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if scheduler:
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+    
     start_epoch = checkpoint['epoch']
     start_loss = checkpoint['loss']
     prv_best_miou = checkpoint['miou']
@@ -159,7 +162,7 @@ def validation(epoch, num_epochs, model, data_loader, criterion, device):
     
 
 def train(num_epochs, model, train_loader, val_loader, criterion, optimizer, 
-          saved_dir, val_every, save_mode, resume_from, checkpoint_path, 
+          saved_dir, val_every, save_mode, resume_from, resume_mode, checkpoint_path, 
           num_to_remain, device, scheduler = None, fp16 = False):
 
     print(f'Start training..')
@@ -170,7 +173,7 @@ def train(num_epochs, model, train_loader, val_loader, criterion, optimizer,
     num_to_remain = 3 # remain 3 files
 
     if resume_from:
-        model, optimizer, scheduler, start_epoch, best_loss, best_miou = load_checkpoint(checkpoint_path, model, optimizer, scheduler)
+        model, optimizer, scheduler, start_epoch, best_loss, best_miou = load_checkpoint(checkpoint_path, model, optimizer, scheduler, resume_mode)
     
     if fp16:
         print("Mixed precision is applied")
@@ -362,7 +365,8 @@ def main():
         'saved_dir': saved_dir, 
         'val_every': cfgs.val_every, 
         'save_mode': cfgs.save_mode, 
-        'resume_from': cfgs.resume_from, 
+        'resume_from': cfgs.resume_from,
+        'resume_mode': cfgs.resume_mode, # 'model' or 'all' 
         'checkpoint_path': cfgs.checkpoint_path, # absolute path
         'num_to_remain': cfgs.num_to_remain,
         'device': device,
