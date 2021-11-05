@@ -387,3 +387,23 @@ class CustomFPN(nn.Module):
 
     def forward(self, x):
         return {'out': x}
+
+    
+class UnetPlusPlus(nn.Module):
+    model_name = "UnetPlusPlus"
+
+    def __init__(self, encoder_name="efficientnet-b3", encoder_weights="imagenet", in_channels=3, classes=11):
+        super().__init__()
+        self.encoder_name = encoder_name
+        self.encoder_weights = encoder_weights
+        self.in_channels = in_channels
+        self.classes = classes
+        self.model = smp.UnetPlusPlus(
+            encoder_name = self.encoder_name,
+            encoder_weights = self.encoder_weights,
+            in_channels = self.in_channels,
+            classes = self.classes
+        )
+    
+    def forward(self, x):
+        return {'out': self.model(x)}
