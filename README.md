@@ -67,7 +67,16 @@ json 형태의 config 파일을 이용하여 모델 학습 및 추론을 원하�
 |model|Val mIoU| LB mIoU |
 |---|---|---|
 |U-Net++|0.680|0.707|
+|Semantic FPN|0.657|0.703|
 
 
 # 참고자료
+### Semantic FPN
+- https://arxiv.org/pdf/1901.02446.pdf
+- https://arxiv.org/pdf/1803.01534.pdf
+
+### Deformable DeepLabV3
+- https://arxiv.org/pdf/1706.05587.pdf
+- https://arxiv.org/pdf/1703.06211.pdf
+
 
