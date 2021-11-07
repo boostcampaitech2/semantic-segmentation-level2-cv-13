@@ -98,3 +98,8 @@ json 형태의 config 파일을 이용하여 모델 학습 및 추론을 원하�
 ### HRNet-OCR
 - https://arxiv.org/pdf/1909.11065.pdf
 - https://github.com/HRNet/HRNet-Semantic-Segmentation/tree/HRNet-OCR?v=2
+
+### Unet
+- https://arxiv.org/abs/1807.06521
+- https://www.kaggle.com/iafoss/hubmap-pytorch-fast-ai-starter-sub
+- https://dacon.io/competitions/official/235746/codeshare/3006
