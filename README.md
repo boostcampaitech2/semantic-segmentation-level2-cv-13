@@ -68,7 +68,8 @@ json 형태의 config 파일을 이용하여 모델 학습 및 추론을 원하�
 |---|---|---|
 |U-Net++|0.680|0.707|
 |Semantic FPN|0.657|0.703|
-
+|Unet + CBAM + ASPP|0.685|0.705|
+|FCN resnet-50|0.5736|0.579|
 # Example
 ![example](./example.PNG)
 
