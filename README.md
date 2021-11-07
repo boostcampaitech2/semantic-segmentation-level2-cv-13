@@ -69,6 +69,8 @@ json 형태의 config 파일을 이용하여 모델 학습 및 추론을 원하�
 |U-Net++|0.680|0.707|
 |Semantic FPN|0.657|0.703|
 
+# Example
+![example](./example.PNG)
 
 # 참고자료
 ### Semantic FPN
