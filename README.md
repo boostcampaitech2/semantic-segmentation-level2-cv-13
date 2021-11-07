@@ -86,6 +86,6 @@ json 형태의 config 파일을 이용하여 모델 학습 및 추론을 원하�
 ### DeepLabV3+
 - https://arxiv.org/pdf/1802.02611.pdf
 
-### FCM
+### FCN
 - https://arxiv.org/pdf/1411.4038.pdf
 
