@@ -91,3 +91,10 @@ json 형태의 config 파일을 이용하여 모델 학습 및 추론을 원하�
 ### FCN
 - https://arxiv.org/pdf/1411.4038.pdf
 
+### DPT
+- https://arxiv.org/pdf/2103.13413.pdf
+- https://github.com/isl-org/DPT
+
+### HRNet-OCR
+- https://arxiv.org/pdf/1909.11065.pdf
+- https://github.com/HRNet/HRNet-Semantic-Segmentation/tree/HRNet-OCR?v=2
