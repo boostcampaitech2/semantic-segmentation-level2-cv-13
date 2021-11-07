@@ -86,3 +86,6 @@ json 형태의 config 파일을 이용하여 모델 학습 및 추론을 원하�
 ### DeepLabV3+
 - https://arxiv.org/pdf/1802.02611.pdf
 
+### FCM
+- https://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Long_Fully_Convolutional_Networks_2015_CVPR_paper.pdf
+
