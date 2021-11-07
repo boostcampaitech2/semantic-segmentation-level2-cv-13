@@ -70,6 +70,7 @@ json 형태의 config 파일을 이용하여 모델 학습 및 추론을 원하�
 |Semantic FPN|0.657|0.703|
 |Unet + CBAM + ASPP|0.685|0.705|
 |FCN resnet-50|0.5736|0.579|
+|DeepLabV3+|0.660|0.680|
 # Example
 ![example](./example.PNG)
 
@@ -82,4 +83,6 @@ json 형태의 config 파일을 이용하여 모델 학습 및 추론을 원하�
 - https://arxiv.org/pdf/1706.05587.pdf
 - https://arxiv.org/pdf/1703.06211.pdf
 
+### DeepLabV3+
+- https://arxiv.org/pdf/1802.02611.pdf
 
