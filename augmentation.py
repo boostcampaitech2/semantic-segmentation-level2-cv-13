@@ -191,3 +191,59 @@ class CHJ_Augmentation:
             A.Resize(512,512),
             ToTensorV2()
         ])
+
+
+class CMKAugmentation:
+    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), data_root="../input/data", 
+    battery_json_dir=None, paperpack_json_dir=None, metal_json_dir=None):
+        self.battery_json_dir = battery_json_dir
+        self.paperpack_json_dir = paperpack_json_dir
+        self.metal_json_dir = metal_json_dir
+
+        self.transform = A.Compose([
+            CopyPasteV2(data_root=data_root, json_dir=self.battery_json_dir, p=0.2, min_resize=120, max_resize=200),
+            CopyPasteV2(data_root=data_root, json_dir=self.paperpack_json_dir, p=0.3, min_resize=100, max_resize=150),
+            CopyPasteV2(data_root=data_root, json_dir=self.metal_json_dir, p=0.3, min_resize=120, max_resize=200),    
+
+            # 좌우반전
+            A.HorizontalFlip(),
+
+            # 밝기 및 색상
+            A.OneOf([
+                A.RGBShift(always_apply=False, p=1.0, r_shift_limit=(-10, 10), g_shift_limit=(-10, 10), b_shift_limit=(-10, 10)),
+                A.RandomBrightness(always_apply=False, p=1.0),
+                A.RandomContrast(always_apply=False, p=1.0),
+                A.RandomGamma(always_apply=False, p=1.0, gamma_limit=(52, 150), eps=1e-07),
+            ], p=1),
+
+            # 왜곡
+            A.OneOf([
+                A.GridDistortion(always_apply=False, p=1.0, num_steps=5, distort_limit=(-0.20000000298023224, 0.20999999344348907), interpolation=0, border_mode=0, value=(0, 0, 0), mask_value=None),
+            ], p=0.5),
+
+            # 노이즈
+            A.OneOf([
+                    A.Blur(p=1),
+                    A.ISONoise(always_apply=False, p=1.0, intensity=(0.10000000149011612, 1.0199999809265137), color_shift=(0.009999999776482582, 0.29999998211860657)),
+                    A.MotionBlur(always_apply=False, p=1.0),
+                    A.MultiplicativeNoise(always_apply=False, p=1.0, multiplier=(0.6100000143051147, 2.009999990463257), per_channel=True, elementwise=True),
+            ], p=0.5),
+            
+            # 일부 drop
+            A.OneOf([
+                A.CoarseDropout(p=1),
+                A.GridDropout(ratio=0.25, p=1),
+            ], p=1),
+
+            A.OneOf([
+                A.RandomSizedCrop(always_apply=False, p=1.0, min_max_height=(250, 512), height=512, width=512, w2h_ratio=1.0, interpolation=0),
+                A.Compose([
+                    A.Resize(height=256, width=256, p=1.0),
+                    A.PadIfNeeded(min_height=512, min_width=512, border_mode=0)
+                ])
+            ], p=0.5),
+ 
+            A.Normalize(mean=mean, std=std),
+            ToTensorV2()
+            ])
+            
